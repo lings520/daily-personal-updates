@@ -1,0 +1,16 @@
+interface:
+  display_name: Market Update
+  short_description: Pastel market snapshot with sentiment and HKT calendar
+  default_prompt: Use $market-update to create yesterday’s dreamy pastel market image
+    with a headline and interpretation, Massive market data, sentiment-labelled news,
+    a Hong Kong events table, small monospaced citations, and brief text with sources
+    below.
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true
