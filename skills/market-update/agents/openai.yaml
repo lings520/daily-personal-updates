@@ -2,9 +2,9 @@ interface:
   display_name: Market Update
   short_description: Editorial market image with risk, sentiment and HKT calendar
   default_prompt: Use $market-update to create yesterday’s dreamy pastel market image
-    with Bookman headings, a lavender Fear & Greed gauge, verified risk context, Massive data, sentiment-labelled news,
-    a Hong Kong events table, small monospaced citations, and brief text with sources
-    below.
+    with Bookman headings, a lavender Fear & Greed gauge, verified risk context, Massive
+    data, sentiment-labelled news, a Hong Kong events table, small monospaced citations,
+    and brief text with sources below.
   icon_small: assets/icon.svg
   icon_large: assets/icon.svg
 policy:
