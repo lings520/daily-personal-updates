@@ -1,3 +1,5 @@
+> For Simplified Chinese output, apply [languages.md](languages.md): use the Noto SC pairing, preserve this layout and inspect both languages. English typography remains unchanged.
+
 # Market snapshot image
 
 Use `workflow.py run` for normal rendering and `run --rerender` for visual retries. The workflow snapshots `config/visual-style.json`; fonts/colours belong there. Commands below remain available for diagnosis.

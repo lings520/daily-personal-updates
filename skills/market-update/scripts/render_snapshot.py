@@ -43,7 +43,8 @@ def resolve_font(explicit, kind):
 
 
 class Renderer:
-    def __init__(self, regular, bold, mono):
+    def __init__(self, regular, bold, mono, translations=None):
+        self.translations = translations or {}
         self.paths = regular, bold, mono
         self.fonts = {}
         # Soft sky/lavender light with mint and blush accents, behind readable cards.
@@ -66,14 +67,18 @@ class Renderer:
 
     def runs(self, value, n, bold=False, mono=False):
         if mono:
-            return [(value, self.font(n, bold, mono), False)]
+            return [(value, self.font(n, bold=bool(self.translations), mono=not bool(self.translations)), False)]
         return [(part, self.font(max(14,min(19,round(n*.60))), mono=True) if CITE.fullmatch(part) else self.font(n,bold), bool(CITE.fullmatch(part)))
                 for part in CITE.split(value) if part]
 
     def width(self, value, n, bold=False, mono=False):
+        value = self.translations.get(value, value)
         return sum(self.draw.textlength(part,font=f) for part,f,_ in self.runs(value,n,bold,mono))
 
     def lines(self, value, width, n=27, bold=False, mono=False):
+        value = self.translations.get(value, value)
+        if self.translations:
+            return self.cjk_lines(value, width, n, bold, mono)
         result = []
         for paragraph in value.split('\n'):
             line = ''
@@ -90,6 +95,33 @@ class Renderer:
             result.append(line)
         return result
 
+    def cjk_lines(self, value, width, n, bold, mono):
+        # Wrap Chinese by character and Latin by word; keep closing punctuation/citations attached.
+        result=[]
+        for paragraph in value.split('\n'):
+            tokens=re.findall(r'\[\d+\]|[\u3400-\u9fff]|[+−<>≤≥-]?\$?[a-zA-Z0-9]+(?:[.,:/+%−-][a-zA-Z0-9]+)*%?(?:[ \t]+(?:bp|bps|pts|pp)\b)?|\s+|.',paragraph)
+            grouped=[]
+            for token in tokens:
+                if CITE.fullmatch(token) and len(grouped)>1 and grouped[-1].isspace():
+                    space=grouped.pop();grouped[-1]+=space+token
+                    continue
+                if grouped and grouped[-1] in '（《【':
+                    grouped[-1]+=token
+                    continue
+                if grouped and (CITE.fullmatch(token) or token in '，。；：！？、）》】%'):
+                    grouped[-1]+=token
+                else:grouped.append(token)
+            line=''
+            for token in grouped:
+                if self.width(token,n,bold,mono)>width:
+                    raise ValueError('Shorten an unbreakable label: '+token)
+                trial=line+token
+                if line and self.width(trial,n,bold,mono)>width:
+                    result.append(line.rstrip());line=token.lstrip()
+                else:line=trial
+            result.append(line.rstrip())
+        return result
+
     def height(self, value, width, n=27, bold=False, mono=False):
         return len(self.lines(value,width,n,bold,mono))*round(n*1.35)
 
@@ -97,7 +129,7 @@ class Renderer:
         color = INK if color is None else color
         step = round(n*1.35)
         wrapped = self.lines(value,width,n,bold,mono)
-        ascent = self.font(n,bold,mono).getmetrics()[0]
+        ascent = self.font(n,bold or (mono and bool(self.translations)),mono and not bool(self.translations)).getmetrics()[0]
         for i,line in enumerate(wrapped):
             cursor, baseline = x, y+i*step+ascent
             for part,f,is_cite in self.runs(line,n,bold,mono):
@@ -241,6 +273,14 @@ class Renderer:
         self.y+=70
 
     def render(self,data,output,preview=None):
+        if self.translations:
+            # Fail visibly on missing glyphs rather than delivering tofu boxes.
+            chars=set("".join(self.translations.values()))
+            for font in (self.font(27),self.font(27,True)):
+                missing=bytes(font.getmask(chr(0x10ffff)))
+                for char in chars:
+                    if not char.isspace() and bytes(font.getmask(char))==missing:
+                        raise ValueError("Chinese font lacks glyph: "+char)
         self.y+=self.text('THE MORNING MARKET',M,self.y,CW,26,True,PURPLE)+12
         self.y+=self.text(data['report_date'],M,self.y,CW,24,False,MUTED)+20
         self.y+=self.text(data['headline'],M,self.y,CW,46,True)+22
@@ -361,13 +401,22 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('input_json');parser.add_argument('output_png')
     parser.add_argument('--style',help='Visual configuration JSON')
+    parser.add_argument('--translation',help='Hash-bound zh-Hans translation JSON')
+    parser.add_argument('--chinese-font-dir')
     parser.add_argument('--preview',help='Optional 600px-wide visual QA PNG')
     for key in ['regular','bold','mono']:parser.add_argument('--font-'+key)
     args=parser.parse_args()
     configure(load_settings('visual-style',args.style))
     data=json.loads(Path(args.input_json).read_text(encoding='utf-8'))
     validate(data)
-    Renderer(*(resolve_font(getattr(args,'font_'+key),key) for key in ['regular','bold','mono'])).render(data,args.output_png,args.preview)
+    fonts={key:resolve_font(getattr(args,'font_'+key),key) for key in ['regular','bold','mono']}
+    translations=None
+    if args.translation:
+        from localization import validate as validate_translation, chinese_fonts
+        if not args.chinese_font_dir:raise ValueError('--chinese-font-dir is required')
+        translations=validate_translation(data,json.loads(Path(args.translation).read_text()))
+        fonts.update(chinese_fonts(args.chinese_font_dir))
+    Renderer(*(fonts[k] for k in ['regular','bold','mono']),translations=translations).render(data,args.output_png,args.preview)
 
 
 if __name__=='__main__':

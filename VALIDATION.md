@@ -56,3 +56,14 @@ A separate agent used the installed skill instructions and saved fixtures to com
 - The Python program prepares requests and consumes saved responses; authenticated retrieval remains with the Massive connector. It does not contain a standalone API client or credentials.
 - The task JSON is a portable definition. Recurrence parsing and saved task configuration do not establish successful future cloud execution, attachment persistence or notification delivery. Those require a recorded task run and result.
 - Live raw responses, trial reports and credentials are not published in this repository.
+
+
+## Simplified Chinese addition — 2026-11-01
+
+- 74 skill tests passed with `MARKET_UPDATE_TEST_FONT_DIR` set to verified Noto SC fonts, plus all 3 task schedule tests (77 total; no skips).
+- Added tests for complete translation coverage, stale snapshot binding, changed prices/signs/citations/tickers/units, locale selection, date-format equivalence, missing fonts, failed font checksums, CJK wrapping, bilingual render caching, editorial invalidation, and two-image review/delivery evidence.
+- Existing English output is pixel-identical to the previous renderer for the same canonical fictional snapshot.
+- Independent fixture workflow produced English 1200×3046 and Simplified Chinese 1200×2824 PNGs and both 600px previews. Both full-size images/previews were visually inspected: no missing glyphs, clipping, overlap or material translation mismatch. Small footnotes/citations remain intentionally secondary. Both fit the enforced 3200px maximum, although this fixture exceeds the preferred 2800px height.
+- An additional Chinese render exercised available Fear & Greed data and a second sentiment-coloured news card (1200×2955). Figures are explicitly fictional.
+- Font downloads use pinned SHA-256 checksums; fresh and cached installations were executed successfully and checksum failure was tested. No market data was fetched for this feature validation.
+- The live task prompt was updated for both languages. Its existing 08:00 Asia/Hong_Kong Tuesday–Saturday schedule was preserved. This verifies configuration, not future scheduled delivery.

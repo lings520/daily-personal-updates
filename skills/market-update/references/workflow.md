@@ -1,3 +1,5 @@
+> Default delivery is now English plus Simplified Chinese. Follow [languages.md](languages.md) for bilingual initialization, the translation pause, both-image review evidence and delivery references. Existing English-only commands below remain supported.
+
 # Market workflow
 
 ## Contents

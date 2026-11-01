@@ -19,7 +19,7 @@ from settings import load as load_settings
 HERE = Path(__file__).resolve().parent
 STAGES = ('plan','collection','normalize','research','compose','render','review','delivery')
 EXTERNAL = ('collection','research','review','delivery')
-SLOTS = ('equities','treasuries','equity-source','treasury-source','editorial')
+SLOTS = ('equities','treasuries','equity-source','treasury-source','editorial','translation-zh-Hans')
 
 
 def now():
@@ -42,12 +42,17 @@ def save(path, value):
     atomic(path,json.dumps(value,indent=2,ensure_ascii=False,allow_nan=False)+'\n')
 
 
-def initialize(directory, report_date=None, as_of=None, example=False, style=None, risk=None):
+def initialize(directory, report_date=None, as_of=None, example=False, style=None, risk=None, languages="en", chinese_font_dir=None):
     directory = Path(directory).resolve()
     if directory.exists() and any(directory.iterdir()):
         raise ValueError('Use a new empty run directory; existing runs are resumed, never reinitialized')
     # Validate before creating files; explicit as-of is for reproducible fixtures only.
     plan = data.make_plan(as_of or now(), report_date, example=example)
+    if languages not in ('en','en,zh-Hans'):raise ValueError('Use en or en,zh-Hans')
+    if languages=='en,zh-Hans':
+        from localization import chinese_fonts
+        if not chinese_font_dir:raise ValueError('Bilingual output requires --chinese-font-dir')
+        chinese_fonts(chinese_font_dir)
     styles = load_settings('visual-style',style)
     risks = load_settings('risk-context',risk)
     directory.mkdir(parents=True, exist_ok=True)
@@ -56,7 +61,8 @@ def initialize(directory, report_date=None, as_of=None, example=False, style=Non
     save(directory/'config/visual-style.json',styles)
     save(directory/'config/risk-context.json',risks)
     created = now()
-    manifest = {'version':1,'created_at':created,'updated_at':created,'inputs':{},'events':[],
+    manifest = {'version':1,'languages':languages.split(','),
+                'chinese_font_dir':str(Path(chinese_font_dir).resolve()) if chinese_font_dir else None,'created_at':created,'updated_at':created,'inputs':{},'events':[],
                 'plan_sha256':digest(directory/'plan.json'),'stages':{s:{'status':'pending','attempts':[]} for s in STAGES}}
     manifest['stages']['plan']['status']='complete'
     manifest['stages']['collection'].update(status='waiting',started_at=created)
@@ -126,6 +132,11 @@ class Workflow:
             data.read_json(source)
         if slot=='editorial' and self.state['stages']['normalize']['status']!='complete':
             raise ValueError('Run numeric validation before supplying verified editorial input')
+        if slot=='translation-zh-Hans':
+            if 'zh-Hans' not in self.state.get('languages',[]):raise ValueError('Initialize with --languages en,zh-Hans')
+            if self.status()['stages']['compose']['status']!='complete':raise ValueError('Compose the current snapshot before translation')
+            from localization import validate as validate_translation
+            validate_translation(data.read_json(self.directory/'artifacts/snapshot.json'),data.read_json(source))
         sha=digest(source)
         existing=self.state['inputs'].get(slot)
         if existing and existing['sha256']==sha and (slot!='editorial' or existing.get('metrics_sha256')==digest(self.directory/'artifacts/metrics.json')):
@@ -138,7 +149,10 @@ class Workflow:
             self.state['inputs'][slot]['metrics_sha256']=digest(self.directory/'artifacts/metrics.json')
         self.state['events'].append({'action':'put','slot':slot,'sha256':sha,'at':now()})
         # Retain external stage start time until its first successful validation.
-        self.invalidate('compose' if slot=='editorial' else 'normalize')
+        self.invalidate('render' if slot=='translation-zh-Hans' else 'compose' if slot=='editorial' else 'normalize')
+        if slot=='translation-zh-Hans':
+            self.persist()
+            return self.status()
         stage='research' if slot=='editorial' else 'collection'
         if self.state['stages'][stage]['status']=='complete':
             self.state['stages'][stage]['status']='pending'
@@ -201,7 +215,7 @@ class Workflow:
                                   data.read_json(paths['treasury-source']) if paths['treasury-source'] else None,
                                   data.read_json(paths['equity-source']) if paths['equity-source'] else None)
             save(metrics,result)
-        self.execute('normalize',[self.directory/'plan.json']+[paths[s] for s in SLOTS if s!='editorial'],['prepare_market_data.py'],[metrics],normalize)
+        self.execute('normalize',[self.directory/'plan.json']+[paths[s] for s in SLOTS if s not in ('editorial','translation-zh-Hans')],['prepare_market_data.py'],[metrics],normalize)
         self.finish_external('collection')
         self.begin('research')
         if not paths['editorial'] or self.state['inputs']['editorial'].get('metrics_sha256')!=digest(metrics):
@@ -210,18 +224,35 @@ class Workflow:
         self.execute('compose',[metrics,paths['editorial'],risk],['prepare_market_data.py','risk_context.py','settings.py','render_snapshot.py'],[snapshot],
                      lambda:save(snapshot,data.compose(data.read_json(metrics),data.read_json(paths['editorial']),load_settings('risk-context',risk))))
         self.finish_external('research')
+        bilingual='zh-Hans' in self.state.get('languages',[])
+        translation=paths['translation-zh-Hans'] if bilingual else None
+        zh_png,zh_preview=out/'market-update-zh-Hans.png',out/'preview-zh-Hans.png'
+        if bilingual:
+            from localization import template, validate as validate_translation, chinese_fonts
+            current=data.read_json(snapshot)
+            save(out/'translation-template-zh-Hans.json',template(current))
+            if not translation or data.read_json(translation).get('source_sha256')!=template(current)['source_sha256']:
+                self.invalidate('render');self.persist()
+                return self.status()
+            validate_translation(current,data.read_json(translation))
         style=self.directory/'config/visual-style.json'
         settings=load_settings('visual-style',style)
         # Include resolved font bytes so changed/substituted fonts invalidate visual QA.
         fonts=[]
         for candidates in settings['fonts'].values():
             fonts.append(next((Path(p) for p in candidates if Path(p).is_file()),None))
+        if bilingual:
+            fonts.extend(Path(p) for p in chinese_fonts(self.state['chinese_font_dir']).values())
         def render():
             proc=subprocess.run([sys.executable,str(HERE/'render_snapshot.py'),str(snapshot),str(png),'--preview',str(preview),'--style',str(style)],capture_output=True,text=True)
             if proc.returncode:
                 raise ValueError(proc.stderr.strip() or 'Renderer failed')
             self.state['render_warnings']=proc.stderr.strip()
-        self.execute('render',[snapshot,style]+fonts,['render_snapshot.py','risk_context.py','settings.py'],[png,preview],render,rerender)
+            if bilingual:
+                proc=subprocess.run([sys.executable,str(HERE/'render_snapshot.py'),str(snapshot),str(zh_png),'--preview',str(zh_preview),'--style',str(style),'--translation',str(translation),'--chinese-font-dir',self.state['chinese_font_dir']],capture_output=True,text=True)
+                if proc.returncode:raise ValueError(proc.stderr.strip() or 'Chinese renderer failed')
+                self.state['render_warnings']+='\n'+proc.stderr.strip()
+        self.execute('render',[snapshot,style,translation]+fonts+([HERE.parent/'config/zh-Hans.json',HERE.parent/'config/chinese-fonts.json'] if bilingual else []),['render_snapshot.py','risk_context.py','settings.py','localization.py'],[png,preview]+([zh_png,zh_preview] if bilingual else []),render,rerender)
         self.begin('review')
         return self.status()
 
@@ -235,6 +266,11 @@ class Workflow:
         actual=digest(self.directory/'artifacts/market-update.png')
         if evidence.get('artifact_sha256')!=actual or not evidence.get('notes'):
             raise ValueError('Evidence must identify the current PNG hash and include notes')
+        if 'zh-Hans' in self.state.get('languages',[]):
+            hashes={lang:digest(self.directory/'artifacts'/name) for lang,name in [('en','market-update.png'),('zh-Hans','market-update-zh-Hans.png')]}
+            if evidence.get('artifacts_sha256')!=hashes:raise ValueError('Evidence must identify both language PNG hashes')
+            if stage=='review' and evidence.get('translation_checked') is not True:raise ValueError('Review Simplified Chinese meaning, figures, fonts and both previews first')
+            if stage=='delivery' and (set(evidence.get('references',{}))!=set(hashes) or not all(evidence['references'].values())):raise ValueError('Delivery requires a real reference for each language')
         if stage=='review':
             if not all(evidence.get(k) is True for k in ('full_size_checked','preview_checked','facts_checked')):
                 raise ValueError('Record all three review checks only after performing them')
@@ -261,10 +297,16 @@ class Workflow:
         metrics=self.directory/'artifacts/metrics.json'
         if stages['normalize']['status']=='complete' and 'editorial' in self.state['inputs'] and self.state['inputs']['editorial'].get('metrics_sha256')!=digest(metrics):
             missing.append('editorial (refresh against revised metrics)')
+        if 'zh-Hans' in self.state.get('languages',[]) and stages['compose']['status']=='complete':
+            from localization import signature
+            translation=self.path('translation-zh-Hans')
+            if not translation or data.read_json(translation).get('source_sha256')!=signature(data.read_json(self.directory/'artifacts/snapshot.json')):
+                missing.append('translation-zh-Hans (translate current snapshot)')
         numeric_missing=[s for s in ('equities','treasuries') if s in missing]
         next_step=('put '+', '.join(numeric_missing) if numeric_missing else
                    'run' if stages['normalize']['status']!='complete' else
                    'research and put editorial' if 'editorial' in missing else
+                   'translate template and put translation-zh-Hans' if any(s.startswith('translation-') for s in missing) else
                    'reverify and put editorial' if missing else
                    'complete' if stages['delivery']['status']=='complete' else
                    'save/display image, then record delivery' if stages['review']['status']=='complete' else
@@ -272,7 +314,7 @@ class Workflow:
         warnings=[]
         if stages['normalize']['status']=='complete' and metrics.exists():
             warnings=data.read_json(metrics).get('warnings',[])
-        result={'run_dir':str(self.directory),'report_date':self.plan['report_date'],'example':self.plan['example'],
+        result={'languages':self.state.get('languages',['en']),'run_dir':str(self.directory),'report_date':self.plan['report_date'],'example':self.plan['example'],
                 'next_step':next_step,'missing_inputs':missing,'warnings':warnings,'render_warnings':self.state.get('render_warnings',''),
                 'stages':{k:{'status':v['status'],'attempts':len(v['attempts']),
                              'seconds':round(sum(a.get('seconds',0) for a in v['attempts']),3),
@@ -283,6 +325,9 @@ class Workflow:
         if stages['render']['status']=='complete':
             result.update(image=str(self.directory/'artifacts/market-update.png'),preview=str(self.directory/'artifacts/preview.png'),
                           artifact_sha256=digest(self.directory/'artifacts/market-update.png'))
+            result['images']={'en':{'image':result['image'],'preview':result['preview'],'sha256':result['artifact_sha256']}}
+            if 'zh-Hans' in self.state.get('languages',[]):
+                result['images']['zh-Hans']={'image':str(self.directory/'artifacts/market-update-zh-Hans.png'),'preview':str(self.directory/'artifacts/preview-zh-Hans.png'),'sha256':digest(self.directory/'artifacts/market-update-zh-Hans.png')}
             result['elapsed_to_render_seconds']=round((datetime.fromisoformat(stages['render']['attempts'][-1]['finished_at'])-datetime.fromisoformat(self.state['created_at'])).total_seconds(),3)
             first=next(a for a in stages['render']['attempts'] if a['status']=='complete')
             result['first_render_elapsed_seconds']=round((datetime.fromisoformat(first['finished_at'])-datetime.fromisoformat(self.state['created_at'])).total_seconds(),3)
@@ -307,6 +352,7 @@ def main():
         if command=='init':
             p.add_argument('--date');p.add_argument('--as-of');p.add_argument('--example',action='store_true')
             p.add_argument('--style');p.add_argument('--risk')
+            p.add_argument('--languages',choices=('en','en,zh-Hans'),default='en');p.add_argument('--chinese-font-dir')
         if command=='put':p.add_argument('--slot',choices=SLOTS,required=True);p.add_argument('--file',required=True)
         if command=='run':p.add_argument('--rerender',action='store_true')
         if command=='begin':p.add_argument('--stage',choices=EXTERNAL,required=True)
@@ -315,7 +361,7 @@ def main():
     args=parser.parse_args()
     try:
         if args.command=='init':
-            result=initialize(args.run_dir,args.date,args.as_of,args.example,args.style,args.risk)
+            result=initialize(args.run_dir,args.date,args.as_of,args.example,args.style,args.risk,args.languages,args.chinese_font_dir)
         else:
             with locked(args.run_dir):
                 workflow=Workflow(args.run_dir)

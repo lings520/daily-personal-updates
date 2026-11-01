@@ -73,3 +73,14 @@ PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
 Tests use clearly fictional fixtures and no credentials. For a fixture run, initialize with `--example --date 2026-10-30 --as-of 2026-10-31T08:00:00+08:00`, supply bundled fixture equities/treasuries, run numeric validation, then supply fixture editorial JSON and resume. Never use fixtures for a real briefing.
 
 The public repository, installed skill and live scheduled task are explicitly synchronized copies. Editing a task JSON does not create/update the scheduler. Editing GitHub does not automatically update an installed skill. Never commit credentials or private briefing outputs.
+
+
+## English and Simplified Chinese
+
+The daily workflow now produces two separate images from one verified snapshot: English and Simplified Chinese (`zh-Hans`). It retains the approved dreamy palette, lavender Fear & Greed gauge, sentiment colours and HKT events table. English retains typography B; Chinese uses Noto Sans CJK SC body text, Noto Serif CJK SC headings/footnotes and smaller monospaced source markers.
+
+Follow [the bilingual workflow](skills/market-update/references/languages.md). Download the SHA-256 pinned fonts once with `scripts/install_chinese_fonts.py --font-dir /absolute/writable/market-fonts`, then initialize with `--languages en,zh-Hans --chinese-font-dir /absolute/writable/market-fonts`. The workflow pauses after composition for the assistant to translate and verify a hash-bound template, then renders both images. It rejects stale or incomplete translations and changed numeric tokens, units, signs, tickers and citations. Human review of meaning and Simplified Chinese usage remains necessary. Both image hashes and actual delivery references are required to complete a bilingual run.
+
+Existing English-only CLI runs remain compatible. The installed skill and scheduled task explicitly select bilingual output. The 08:00 Hong Kong Tuesday–Saturday schedule is unchanged. No new market queries are required for translation. Font downloads require network access; cached fonts and all private run files stay outside this public repository.
+
+For all bilingual integration tests, install fonts and set `MARKET_UPDATE_TEST_FONT_DIR` to that absolute cache directory before running the existing test commands. Without it, font-dependent tests are explicitly skipped; that is not a complete bilingual validation.
