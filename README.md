@@ -1,90 +1,75 @@
 # Daily Personal Updates
 
-Skills, instructions, and task definitions for concise personal briefings. The first briefing is a US market update.
+Reusable skills, workflows and scheduled-task definitions for personal briefings. The first workflow produces a compact US market image with verified data, news and the next US session's calendar in Hong Kong time.
 
-## Market update
+## Three responsibilities
 
-The `market-update` skill prepares a source-backed daily snapshot covering SPY and QQQ, US Treasury yields, market breadth and sector performance, VIX, CNN Fear & Greed and other risk indicators, major economic news, and the next US session's calendar in Hong Kong time. It uses Massive first for market data and names any fallback sources.
-
-The primary output is a portrait PNG with a headline, a clearly labelled interpretation, a dreamy pastel palette, Bookman headings with Nimbus Sans body text, a lavender Fear & Greed gauge, computed risk-context badges, sentiment-labelled news cards, an HKT events table, and small monospaced citations. A short accessible summary and source links accompany the image.
-
-## What's here
-
-| Path | Purpose |
+| Layer | Responsibility |
 | --- | --- |
-| [skills/market-update/SKILL.md](skills/market-update/SKILL.md) | Full research, verification, and delivery instructions |
-| [skills/market-update/references/image-format.md](skills/market-update/references/image-format.md) | Image payload, visual style, and quality checks |
-| [skills/market-update/scripts/render_snapshot.py](skills/market-update/scripts/render_snapshot.py) | Deterministic PNG renderer for verified data |
-| [skills/market-update/config/market-data.json](skills/market-update/config/market-data.json) | Fixed instruments, query parameters, and fallback order |
-| [skills/market-update/config/us-equity-calendar.json](skills/market-update/config/us-equity-calendar.json) | Verified equity holidays and early closes for 2026–2028 |
-| [skills/market-update/queries/equity-returns.sql](skills/market-update/queries/equity-returns.sql) | Filtered two-session ETF comparisons with missing/duplicate checks |
-| [skills/market-update/scripts/prepare_market_data.py](skills/market-update/scripts/prepare_market_data.py) | Request planning, decimal calculations, validation, and renderer input |
-| [skills/market-update/references/data-pipeline.md](skills/market-update/references/data-pipeline.md) | Exact connector execution steps, input schemas, and fallback handling |
-| [skills/market-update/tests](skills/market-update/tests) | Offline fixtures and regression tests, including CLI-to-PNG integration |
-| [skills/market-update/agents/openai.yaml](skills/market-update/agents/openai.yaml) | Skill display and invocation metadata |
-| [tasks/morning-market-update.json](tasks/morning-market-update.json) | Snapshot of the scheduled task's prompt, timing mode, timezone, and iCalendar schedule |
-| [examples/market-update.example.json](examples/market-update.example.json) | Fictional sample payload for trying the renderer |
+| [Market Update skill](skills/market-update/SKILL.md) | Understand the request, apply preferences, verify sources and interpret the market |
+| [Workflow](skills/market-update/scripts/workflow.py) | Plan, register inputs, validate, compose, render, track review/delivery and record timings |
+| [Scheduled task](tasks/morning-market-update.json) | Invoke the installed skill at 08:00 Asia/Hong_Kong, Tuesday–Saturday |
 
-## Use the skill
+The assistant performs authenticated Massive retrieval, news research, visual review and actual delivery. The Python workflow manages reproducible local stages; it does not contain API credentials, make network requests, inspect images itself or publish files.
 
-Use the skill in a compatible assistant that supports installed skills, the Massive connector, live web retrieval, and image/file delivery. Invoke it with `@market-update` or ask for a daily US market briefing. The skill describes how to verify dates and sources, handle holidays and unavailable data, and prepare the structured payload.
+## Output and shared settings
 
-The data pipeline validates observations and computes metrics before the renderer lays out the image. It rejects malformed dates, bad prices, duplicate bars, inconsistent comparisons and unmapped source keys. Missing observations remain unavailable; older Treasury observations retain their dates and request a fallback check. Source support for news and interpretation still requires independent verification.
+The PNG covers SPY/QQQ, Treasury yields, breadth and sector proxies, risk indicators, CNN US equity Fear & Greed, prior-day news and upcoming HKT events. It uses approved Bookman headings, Nimbus Sans body text, small monospaced citations, dreamy colours, a lavender sentiment gauge and labelled risk context. Missing or unverified data stay visible. A 60–100 word accessible summary and source links accompany the image.
 
-The Python preparation script does **not** make network calls or inherit connector credentials. A compatible assistant executes its generated requests through the authenticated Massive connector. The normal equity path uses two grouped daily data fetches plus one filtered SQL query for SPY, QQQ, RSP, all 11 sectors, and three optional ETF proxies. A separate date-bounded request obtains Treasury yields. Read [data-pipeline.md](skills/market-update/references/data-pipeline.md) for the full workflow.
+| Configuration | Purpose |
+| --- | --- |
+| [market-data.json](skills/market-update/config/market-data.json) | Instruments, fixed connector requests and source fallbacks |
+| [us-equity-calendar.json](skills/market-update/config/us-equity-calendar.json) | Verified scheduled US equity sessions, 2026–2028 |
+| [risk-context.json](skills/market-update/config/risk-context.json) | Lookback, thresholds and percentile method |
+| [visual-style.json](skills/market-update/config/visual-style.json) | Fonts, palette, background and sentiment gauge |
 
-Use Python 3.10+ with an available IANA timezone database. Install the tested dependencies:
+New runs capture configuration snapshots. The script calculates risk badges and their reference legend from the same thresholds. Review-image example scores are never live data.
 
-```bash
-python3 -m pip install -r requirements.txt
-```
+## Run and resume
 
-To try just the fictional visual layout:
+Use Python 3.10+ with an IANA timezone database. Install dependencies with `python3 -m pip install -r requirements.txt`. Approved fonts are provided by `fonts-urw-base35` and `fonts-dejavu-core` on Debian/Ubuntu; configure installed font paths on other systems. Missing approved fonts produce a warning and use configured fallbacks.
+
+Read [workflow.md](skills/market-update/references/workflow.md) for the complete command sequence and input/output contracts. A new briefing starts with:
 
 ```bash
-python3 skills/market-update/scripts/render_snapshot.py \
-  examples/market-update.example.json output/example.png \
-  --preview output/example-preview.png
+SKILL_DIR=skills/market-update
+RUN_DIR=output/my-briefing
+python3 "$SKILL_DIR/scripts/workflow.py" init --run-dir "$RUN_DIR"
 ```
 
-The sample is fictional. Approved typography B uses URW Bookman Demi headings/bold values, Nimbus Sans body text, and DejaVu Sans Mono citations/footer. Install `fonts-urw-base35` and `fonts-dejavu-core` on Debian/Ubuntu, or supply font paths through the renderer options. Missing editorial fonts trigger a warning and a documented DejaVu/Liberation fallback. See [image-format.md](skills/market-update/references/image-format.md) for the payload and visual review instructions.
+Add `--date YYYY-MM-DD` for a historical US session. The assistant executes the generated connector requests and SQL, then registers the responses:
 
-## Test the complete local pipeline
+```bash
+python3 "$SKILL_DIR/scripts/workflow.py" put --run-dir "$RUN_DIR" --slot equities --file /absolute/path/equities.csv
+python3 "$SKILL_DIR/scripts/workflow.py" put --run-dir "$RUN_DIR" --slot treasuries --file /absolute/path/treasuries.json
+python3 "$SKILL_DIR/scripts/workflow.py" run --run-dir "$RUN_DIR"
+```
 
-Run the offline suite and the schedule checks. Neither requires API keys or network access:
+The workflow validates numbers and pauses for verified editorial research. Register `editorial.json` in the `editorial` slot, then resume `run` to compose and render. The assistant inspects the image and uses real delivery tools before recording review/delivery evidence. Exit code 3 means external input is needed, not a computation failure. Exit code 2 identifies invalid input or a failed stage.
+
+```bash
+python3 "$SKILL_DIR/scripts/workflow.py" status --run-dir "$RUN_DIR"
+python3 "$SKILL_DIR/scripts/workflow.py" run --run-dir "$RUN_DIR" --rerender
+python3 "$SKILL_DIR/scripts/workflow.py" configure --run-dir "$RUN_DIR" --kind visual-style --file /absolute/path/visual-style.json
+```
+
+Successful unchanged stages are cached within that run. A style revision rerenders without repeating research or calculations. Revised market data require editorial re-verification. Rendering changes invalidate previous visual review and delivery records. Each daily briefing needs a fresh run and fresh retrieval; this is not a cross-day price cache.
+
+Run manifests record hashes, attempts, errors and timings. External timers include assistant work/waits and may overlap; they must not be added to invent an end-to-end time. They do not prove cloud scheduling or notification delivery. Private manifests, raw data and images belong under ignored `output/` or outside this repository.
+
+## Reference and tests
+
+- [Research policy](skills/market-update/references/research-policy.md): dates, source verification, numerical comparisons, news and interpretation.
+- [Data pipeline](skills/market-update/references/data-pipeline.md): Massive requests, SQL, raw response formats and retained low-level CLIs.
+- [Risk and sentiment](skills/market-update/references/risk-sentiment.md): CNN sourcing, history and missing-data rules.
+- [Image format](skills/market-update/references/image-format.md): payload, typography and visual checks.
+- [Validation record](VALIDATION.md): completed checks and their limits.
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s skills/market-update/tests -v
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
 ```
 
-To keep an inspectable fictional result:
+Tests use clearly fictional fixtures and no credentials. For a fixture run, initialize with `--example --date 2026-10-30 --as-of 2026-10-31T08:00:00+08:00`, supply bundled fixture equities/treasuries, run numeric validation, then supply fixture editorial JSON and resume. Never use fixtures for a real briefing.
 
-```bash
-SKILL_DIR=skills/market-update
-python3 "$SKILL_DIR/scripts/prepare_market_data.py" plan \
-  --date 2026-10-30 --as-of 2026-10-31T08:00:00+08:00 --example \
-  --output output/fixture/plan.json --sql-output output/fixture/queries.sql
-python3 "$SKILL_DIR/scripts/prepare_market_data.py" normalize \
-  --plan output/fixture/plan.json --equities "$SKILL_DIR/tests/fixtures/equity-returns.csv" \
-  --treasuries "$SKILL_DIR/tests/fixtures/treasuries.json" --output output/fixture/metrics.json
-python3 "$SKILL_DIR/scripts/prepare_market_data.py" compose \
-  --metrics output/fixture/metrics.json --editorial "$SKILL_DIR/tests/fixtures/editorial.json" \
-  --output output/fixture/snapshot.json
-python3 "$SKILL_DIR/scripts/render_snapshot.py" \
-  output/fixture/snapshot.json output/fixture/snapshot.png --preview output/fixture/preview.png
-```
-
-Fixtures exercise holidays, early closes, DST and HKT midnight rollovers, stale/null yields, missing sectors, inconsistent units and dates, and citation validation. They are **never inputs to a real daily update**. Generated reports and raw data belong under ignored `output/` or outside this public repository. See [VALIDATION.md](VALIDATION.md) for the latest recorded validation and its limits.
-
-## Risk and sentiment
-
-Read [risk-sentiment.md](skills/market-update/references/risk-sentiment.md) for retrieval and the input contract. The CNN US equity Fear & Greed gauge uses pale-to-deep lavender, a dark marker, the published label, point change and observation timestamp. Unverified scores remain unavailable; older scores are visibly dated.
-
-VIX badges use labelled display bands. Dollar, oil and gold badges compare the absolute daily return with 252 prior returns from the same source/instrument/cutoff. The Python module calculates midrank percentiles, excludes the current observation, and rejects mismatched or malformed history. With insufficient history it displays context unavailable rather than a made-up percentile. These are descriptive conventions, not trading signals. Review-image scores and P53/P93/P98 examples are never live inputs.
-
-## Scheduled task
-
-The task definition requests **08:00 Asia/Hong_Kong, Tuesday–Saturday**, with an explicit timezone in DTSTART. Its short prompt invokes the installed skill, where detailed research and design rules live. It intentionally omits account-specific identifiers. Consult the scheduler for the live task and its displayed run times; this JSON is a reference copy and does not create or run an automation by itself. Local recurrence tests verify the definition; they do not prove cloud execution or delivery.
-
-This repository is a snapshot: editing these files does not automatically update the installed skill or the scheduled task, and changes to those do not automatically update this repository. Synchronize changes explicitly when needed. Do not commit API keys, access tokens, or private update output to this public repository.
+The public repository, installed skill and live scheduled task are explicitly synchronized copies. Editing a task JSON does not create/update the scheduler. Editing GitHub does not automatically update an installed skill. Never commit credentials or private briefing outputs.

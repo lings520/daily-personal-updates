@@ -9,36 +9,36 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 W, H, M = 1200, 3600, 48
 CW = W - 2*M
-INK, MUTED, PURPLE = '#27334F', '#5C6580', '#7662A0'
-RED, GREEN, CITATION = '#AE455C', '#287968', '#7D7892'
+from settings import load as load_settings
+STYLE = load_settings('visual-style')
 CITE = re.compile(r'(\[\d+\])')
-SENTIMENT = {
-    'negative': ('ADVERSE', '#FCEDF1', '#F2CDDA', RED),
-    'positive': ('SUPPORTIVE', '#EDF8F2', '#D6EFE4', GREEN),
-    'neutral': ('NEUTRAL', '#EEEAF9', '#DCD3EF', PURPLE),
-    'mixed': ('MIXED', '#EEEAF9', '#DCD3EF', PURPLE),
-}
 
+def configure(style):
+    global STYLE, INK, MUTED, PURPLE, RED, GREEN, CITATION, SENTIMENT
+    from settings import validate as validate_settings
+    validate_settings('visual-style', style)
+    STYLE = style
+    c = style['colours']
+    INK, MUTED, PURPLE = c['ink'], c['muted'], c['purple']
+    RED, GREEN, CITATION = c['red'], c['green'], c['citation']
+    SENTIMENT = {
+        'negative': ('ADVERSE', c['negative_card'], c['negative_chip'], RED),
+        'positive': ('SUPPORTIVE', c['positive_card'], c['positive_chip'], GREEN),
+        'neutral': ('NEUTRAL', c['neutral_card'], c['neutral_chip'], PURPLE),
+        'mixed': ('MIXED', c['neutral_card'], c['neutral_chip'], PURPLE),
+    }
+
+configure(STYLE)
 
 def resolve_font(explicit, kind):
     if explicit:
         return explicit
-    preferred = {'regular': '/usr/share/fonts/opentype/urw-base35/NimbusSans-Regular.otf',
-                 'bold': '/usr/share/fonts/opentype/urw-base35/URWBookman-Demi.otf'}
-    if kind in preferred and Path(preferred[kind]).exists():
-        return preferred[kind]
-    if kind in preferred:
-        import warnings
-        warnings.warn('Approved editorial font unavailable; using documented fallback. Install fonts-urw-base35.')
-    names = {
-        'regular': ['dejavu/DejaVuSans.ttf', 'liberation2/LiberationSans-Regular.ttf'],
-        'bold': ['dejavu/DejaVuSans-Bold.ttf', 'liberation2/LiberationSans-Bold.ttf'],
-        'mono': ['dejavu/DejaVuSansMono.ttf', 'liberation2/LiberationMono-Regular.ttf'],
-    }
-    for relative in names[kind]:
-        path = Path('/usr/share/fonts/truetype') / relative
-        if path.exists():
-            return str(path)
+    for i, candidate in enumerate(STYLE['fonts'][kind]):
+        if Path(candidate).exists():
+            if i:
+                import warnings
+                warnings.warn('Approved font unavailable; using configured fallback: '+candidate)
+            return candidate
     raise ValueError(f'Supply --font-{kind} with an available TrueType font path.')
 
 
@@ -47,14 +47,11 @@ class Renderer:
         self.paths = regular, bold, mono
         self.fonts = {}
         # Soft sky/lavender light with mint and blush accents, behind readable cards.
-        bg = Image.new('RGBA', (300, 900), '#F6F6FD')
-        for bbox, color in [((-80,-100,200,250),(218,205,245,145)),
-                            ((120,20,440,400),(195,225,245,145)),
-                            ((-120,300,180,700),(204,236,222,120)),
-                            ((100,520,420,940),(246,207,222,140))]:
+        bg = Image.new('RGBA', (300, 900), STYLE['colours']['background'])
+        for bbox, color in STYLE['background_glows']:
             mask = Image.new('L', bg.size, 0)
             ImageDraw.Draw(mask).ellipse(bbox, fill=color[3])
-            layer = Image.new('RGBA', bg.size, color[:3]+(255,))
+            layer = Image.new('RGBA', bg.size, tuple(color[:3])+(255,))
             layer.putalpha(mask.filter(ImageFilter.GaussianBlur(50)))
             bg.alpha_composite(layer)
         self.im = bg.resize((W,H), Image.Resampling.LANCZOS)
@@ -96,7 +93,8 @@ class Renderer:
     def height(self, value, width, n=27, bold=False, mono=False):
         return len(self.lines(value,width,n,bold,mono))*round(n*1.35)
 
-    def text(self, value, x, y, width, n=27, bold=False, color=INK, mono=False):
+    def text(self, value, x, y, width, n=27, bold=False, color=None, mono=False):
+        color = INK if color is None else color
         step = round(n*1.35)
         wrapped = self.lines(value,width,n,bold,mono)
         ascent = self.font(n,bold,mono).getmetrics()[0]
@@ -108,11 +106,12 @@ class Renderer:
                 cursor += self.draw.textlength(part,font=f)
         return len(wrapped)*step
 
-    def card(self, y, height, fill='#FFFFFF', x=M, width=CW):
+    def card(self, y, height, fill=None, x=M, width=CW):
+        fill = STYLE['colours']['white'] if fill is None else fill
         shadow = Image.new('RGBA',self.im.size,(0,0,0,0))
         ImageDraw.Draw(shadow).rounded_rectangle((x,y+5,x+width,y+height+5),22,fill=(71,56,112,19))
         self.im.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(9)))
-        self.draw.rounded_rectangle((x,y,x+width,y+height),22,fill=fill,outline='#E6E0EF',width=1)
+        self.draw.rounded_rectangle((x,y,x+width,y+height),22,fill=fill,outline=STYLE['colours']['outline'],width=1)
 
     def section(self, label):
         self.draw.rounded_rectangle((M,self.y+7,M+7,self.y+30),3,fill=PURPLE)
@@ -154,11 +153,11 @@ class Renderer:
         half=(CW-64)//2
         sector_height=max(self.height(sectors[k],half-28,25,True) for k in ['leader','laggard'])
         height=24+sum(heights)+10*len(heights)+56+sector_height+12+self.height(sectors['coverage'],CW-48,21)+18
-        self.card(self.y,height,'#F5FCF9')
+        self.card(self.y,height,STYLE['colours']['breadth_card'])
         y=self.y+18
         for i,t in enumerate(data['breadth']):
             y+=self.text(t,M+24,y,CW-48,27,i==0,INK if i==0 else MUTED)+10
-        for i,(key,label,fill,ink) in enumerate([('leader','LEADER','#D6EFE4',GREEN),('laggard','LAGGARD','#F8DDE5',RED)]):
+        for i,(key,label,fill,ink) in enumerate([('leader','LEADER',STYLE['colours']['positive_chip'],GREEN),('laggard','LAGGARD',STYLE['colours']['laggard_chip'],RED)]):
             x=M+24+i*(half+16)
             self.pill(label,x,y,fill,ink,half)
             self.text(sectors[key],x,y+44,half,25,True,ink)
@@ -171,9 +170,9 @@ class Renderer:
         header_height=max(self.height(h,w-16,23,True) for h,w in zip(headers,widths))+30
         row_heights=[max(self.height(t,w-20,27,i==0) for i,(t,w) in enumerate(zip(row,widths)))+24 for row in rows]
         height=header_height+sum(row_heights)+18
-        self.card(self.y,height,'#F8F5FF')
-        self.draw.rounded_rectangle((M+1,self.y+1,W-M-1,self.y+header_height),21,fill='#DFD8F0')
-        self.draw.rectangle((M+1,self.y+header_height-20,W-M-1,self.y+header_height),fill='#DFD8F0')
+        self.card(self.y,height,STYLE['colours']['table_card'])
+        self.draw.rounded_rectangle((M+1,self.y+1,W-M-1,self.y+header_height),21,fill=STYLE['colours']['table_header'])
+        self.draw.rectangle((M+1,self.y+header_height-20,W-M-1,self.y+header_height),fill=STYLE['colours']['table_header'])
         x=M+24
         for h,w in zip(headers,widths):
             self.text(h,x,self.y+14,w-16,23,True,PURPLE);x+=w
@@ -183,7 +182,7 @@ class Renderer:
             for i,(t,w) in enumerate(zip(row,widths)):
                 self.text(t,x,y,w-20,27,i==0,PURPLE if i==0 and title.startswith('WHAT TO WATCH') else INK);x+=w
             y+=rh
-            self.draw.line((M+24,y-9,W-M-24,y-9),fill='#E3DFEC',width=1)
+            self.draw.line((M+24,y-9,W-M-24,y-9),fill=STYLE['colours']['divider'],width=1)
         self.y+=height+22
 
     def risk_section(self,data):
@@ -191,15 +190,15 @@ class Renderer:
         rows=[r['cells'] for r in data['risk']]
         self.section('RISK & SENTIMENT')
         y=self.y
-        self.card(y,266,'#F8F5FF')
+        self.card(y,266,STYLE['colours']['table_card'])
         self.text(fg['title'],74,y+18,700,24,True,PURPLE)
         self.text('0 = fear · 100 = greed',876,y+18,250,17,color=MUTED)
         self.text(format(fg['score'],'.1f')+' / 100' if fg['status']=='ok' else 'Unavailable',74,y+55,275,36,True)
-        self.pill(fg.get('rating','NO DATA'),348,y+63,'#E5DDF3','#665080',300)
+        self.pill(fg.get('rating','NO DATA'),348,y+63,STYLE['colours']['fear_chip'],STYLE['colours']['fear_ink'],300)
         self.text(fg.get('change','Score verification incomplete'),670,y+65,456,23,color=MUTED)
         x0,x1=74,1126
-        boundaries=[0,25,45,55,75,100]
-        colors=['#EDE6F7','#D5C6EC','#B7A0D8','#9476BE','#6C4A96']
+        boundaries=STYLE['fear_greed']['bounds']
+        colors=STYLE['fear_greed']['colours']
         yy=y+128
         for i,c in enumerate(colors):
             a=x0+(x1-x0)*boundaries[i]/100;z=x0+(x1-x0)*boundaries[i+1]/100
@@ -220,12 +219,12 @@ class Renderer:
         ws=[230,279,238,309]
         row_heights=[max(36,*(self.height(t,ws[j]-14,26,j==0) for j,t in enumerate(row)))+24 for row in rows]
         table_height=77+sum(row_heights)+42
-        self.card(y,table_height,'#F8F5FF')
-        self.draw.rounded_rectangle((49,y+1,1151,y+57),21,fill='#DFD8F0')
-        self.draw.rectangle((49,y+36,1151,y+57),fill='#DFD8F0')
+        self.card(y,table_height,STYLE['colours']['table_card'])
+        self.draw.rounded_rectangle((49,y+1,1151,y+57),21,fill=STYLE['colours']['table_header'])
+        self.draw.rectangle((49,y+36,1151,y+57),fill=STYLE['colours']['table_header'])
         for x,w,h in zip(xs,ws,['Benchmark','Level','Daily change','Context']):
             self.text(h,x,y+14,w-10,23,True,PURPLE)
-        palette={'lavender':('#E4DCF5',PURPLE),'mint':('#D6EFE4',GREEN),'peach':('#F8E1CC','#935B2C'),'rose':('#F5D6E0',RED),'muted':('#E9E7EE',MUTED)}
+        palette={'lavender':(STYLE['colours']['context_lavender'],PURPLE),'mint':(STYLE['colours']['positive_chip'],GREEN),'peach':(STYLE['colours']['context_peach'],STYLE['colours']['context_peach_ink']),'rose':(STYLE['colours']['context_rose'],RED),'muted':(STYLE['colours']['context_muted'],MUTED)}
         yy=y+77
         for i,row in enumerate(rows):
             context=data['risk'][i].get('context', {'label':'UNAVAILABLE','tone':'muted'})
@@ -234,10 +233,11 @@ class Renderer:
                 self.text(t,xs[j],yy,ws[j]-14,26,j==0)
             self.pill(label,xs[3],yy-1,fill,ink,300)
             yy+=row_heights[i]
-            if i<3:self.draw.line((72,yy-12,1128,yy-12),fill='#E3DFEC',width=1)
-        self.text('P = percentile of absolute move vs 252 prior returns; unavailable if insufficient.',72,yy,1056,18,mono=True,color=MUTED)
+            if i<3:self.draw.line((72,yy-12,1128,yy-12),fill=STYLE['colours']['divider'],width=1)
+        self.text('P = percentile of absolute move vs '+str(data.get('risk_configuration',load_settings('risk-context'))['lookback_returns'])+' prior returns; unavailable if insufficient.',72,yy,1056,18,mono=True,color=MUTED)
         self.y+=table_height+16
-        self.text('VIX: <15 subdued; 15–<20 moderate; 20–<30 elevated; ≥30 high.\nP: <90 typical; 90–<97 large; ≥97 extreme. Display conventions, not trade signals.',52,self.y,1096,19,mono=True,color=MUTED)
+        from risk_context import reference_legend
+        self.text(reference_legend(data.get('risk_configuration')),52,self.y,1096,19,mono=True,color=MUTED)
         self.y+=70
 
     def render(self,data,output,preview=None):
@@ -245,13 +245,13 @@ class Renderer:
         self.y+=self.text(data['report_date'],M,self.y,CW,24,False,MUTED)+20
         self.y+=self.text(data['headline'],M,self.y,CW,46,True)+22
         h=self.height(data['interpretation'],CW-52,30)+78
-        self.card(self.y,h,'#EAE4F6')
+        self.card(self.y,h,STYLE['colours']['interpretation'])
         self.text('THE READ · INTERPRETATION',M+26,self.y+18,CW-52,22,True,PURPLE)
         self.text(data['interpretation'],M+26,self.y+58,CW-52,30)
         self.y+=h+22
         self.y+=self.text(data['session_note'],M,self.y,CW,23,False,MUTED)+24
-        self.metric_cards('US EQUITIES',data['equities'],(25,44,29),'#FFF8FA',True)
-        self.metric_cards('TREASURY YIELDS',data['yields'],(24,39,25),'#F3F0FC')
+        self.metric_cards('US EQUITIES',data['equities'],(25,44,29),STYLE['colours']['equity_card'],True)
+        self.metric_cards('TREASURY YIELDS',data['yields'],(24,39,25),STYLE['colours']['yield_card'])
         self.breadth(data)
         self.risk_section(data)
         self.section('WHAT HAPPENED')
@@ -265,7 +265,7 @@ class Renderer:
         self.y+=8
         self.table('WHAT TO WATCH NEXT · HKT',['HKT date/time','Event','What to watch'],[[r['hkt'],r['event'],r['watch']] for r in data['upcoming']],[230,536,290])
         for note in data['footer']:
-            self.y+=self.text(note,M+4,self.y,CW-8,19,False,'#73758B',True)+6
+            self.y+=self.text(note,M+4,self.y,CW-8,19,False,STYLE['colours']['footer'],True)+6
         self.y+=26
         if self.y>3200:
             raise ValueError(f'Image too tall ({self.y}px): shorten copy without dropping dates, units, or material caveats. Do not shrink fonts.')
@@ -360,9 +360,11 @@ def validate(data):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('input_json');parser.add_argument('output_png')
+    parser.add_argument('--style',help='Visual configuration JSON')
     parser.add_argument('--preview',help='Optional 600px-wide visual QA PNG')
     for key in ['regular','bold','mono']:parser.add_argument('--font-'+key)
     args=parser.parse_args()
+    configure(load_settings('visual-style',args.style))
     data=json.loads(Path(args.input_json).read_text(encoding='utf-8'))
     validate(data)
     Renderer(*(resolve_font(getattr(args,'font_'+key),key) for key in ['regular','bold','mono'])).render(data,args.output_png,args.preview)

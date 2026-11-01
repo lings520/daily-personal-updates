@@ -1,5 +1,7 @@
 # Fixed market-data pipeline
 
+Use [workflow.md](workflow.md) and `scripts/workflow.py` for normal execution, retries and timing. This page defines connector requests, raw input contracts and the retained low-level CLI for diagnosis.
+
 ## Contents
 
 - Responsibilities and files

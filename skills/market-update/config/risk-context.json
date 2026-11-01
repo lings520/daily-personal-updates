@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "lookback_returns": 252,
+  "vix_bounds": [15, 20, 30],
+  "move_percentile_bounds": [90, 97],
+  "percentile_method": "midrank"
+}

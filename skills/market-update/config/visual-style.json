@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "name": "Editorial B",
+  "fonts": {
+    "regular": [
+      "/usr/share/fonts/opentype/urw-base35/NimbusSans-Regular.otf",
+      "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+      "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf"
+    ],
+    "bold": [
+      "/usr/share/fonts/opentype/urw-base35/URWBookman-Demi.otf",
+      "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+      "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf"
+    ],
+    "mono": [
+      "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+      "/usr/share/fonts/truetype/liberation2/LiberationMono-Regular.ttf"
+    ]
+  },
+  "colours": {
+    "ink": "#27334F",
+    "muted": "#5C6580",
+    "purple": "#7662A0",
+    "red": "#AE455C",
+    "green": "#287968",
+    "citation": "#7D7892",
+    "background": "#F6F6FD",
+    "white": "#FFFFFF",
+    "outline": "#E6E0EF",
+    "positive_card": "#EDF8F2",
+    "positive_chip": "#D6EFE4",
+    "negative_card": "#FCEDF1",
+    "negative_chip": "#F2CDDA",
+    "neutral_card": "#EEEAF9",
+    "neutral_chip": "#DCD3EF",
+    "equity_card": "#FFF8FA",
+    "yield_card": "#F3F0FC",
+    "breadth_card": "#F5FCF9",
+    "laggard_chip": "#F8DDE5",
+    "table_card": "#F8F5FF",
+    "table_header": "#DFD8F0",
+    "divider": "#E3DFEC",
+    "interpretation": "#EAE4F6",
+    "footer": "#73758B",
+    "fear_chip": "#E5DDF3",
+    "fear_ink": "#665080",
+    "context_lavender": "#E4DCF5",
+    "context_peach": "#F8E1CC",
+    "context_peach_ink": "#935B2C",
+    "context_rose": "#F5D6E0",
+    "context_muted": "#E9E7EE"
+  },
+  "fear_greed": {
+    "bounds": [
+      0,
+      25,
+      45,
+      55,
+      75,
+      100
+    ],
+    "colours": [
+      "#EDE6F7",
+      "#D5C6EC",
+      "#B7A0D8",
+      "#9476BE",
+      "#6C4A96"
+    ]
+  },
+  "background_glows": [
+    [
+      [
+        -80,
+        -100,
+        200,
+        250
+      ],
+      [
+        218,
+        205,
+        245,
+        145
+      ]
+    ],
+    [
+      [
+        120,
+        20,
+        440,
+        400
+      ],
+      [
+        195,
+        225,
+        245,
+        145
+      ]
+    ],
+    [
+      [
+        -120,
+        300,
+        180,
+        700
+      ],
+      [
+        204,
+        236,
+        222,
+        120
+      ]
+    ],
+    [
+      [
+        100,
+        520,
+        420,
+        940
+      ],
+      [
+        246,
+        207,
+        222,
+        140
+      ]
+    ]
+  ]
+}

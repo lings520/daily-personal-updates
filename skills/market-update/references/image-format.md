@@ -1,5 +1,7 @@
 # Market snapshot image
 
+Use `workflow.py run` for normal rendering and `run --rerender` for visual retries. The workflow snapshots `config/visual-style.json`; fonts/colours belong there. Commands below remain available for diagnosis.
+
 Use the bundled renderer for an exact, repeatable PNG layout. It uses Pillow and renders supplied text verbatim; it does not fetch, calculate, infer, or validate market facts. Use `prepare_market_data.py normalize` and `compose` from [data-pipeline.md](data-pipeline.md) to validate observations, perform calculations and build its input; complete independent source verification for prose and events. Use another deterministic HTML/SVG/chart renderer only if this renderer is unavailable; follow the same design and visual QA rules. Do not generate factual numbers, labels, or headlines with a generative image model.
 
 ## Approved visual style

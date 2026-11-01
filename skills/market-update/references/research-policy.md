@@ -1,0 +1,74 @@
+# Research and verification policy
+
+Detailed policy for the assistant-led collection and research stages. Use [workflow.md](workflow.md) for execution; use this page for source and financial interpretation rules.
+
+## Resolve the reporting date
+
+- Use an explicit requested date if supplied. Otherwise set the target date to yesterday's calendar date in the user's current timezone, defaulting to Asia/Hong_Kong when no timezone is available. Interpret that date as the US market session and US news date in America/New_York; say so in the header. This supports a Hong Kong morning recap of the prior US session.
+- State the exact target date and US/Eastern convention, plus the retrieval time in the user's timezone. Use IANA timezone conversion to respect daylight saving; do not hardcode the Hong Kong–New York offset.
+- Check whether the target session has completed, including early closes. If it has not, clearly label available prices as intraday or use the latest completed session and label its date; never call them final target-date closes.
+- On weekends or US equity holidays, say that equities were closed and show the latest completed session on or before the target date as context, with its actual date. Keep the news window on the target calendar date. If the target-day news is quiet, briefly add separately dated context from the last session only when useful.
+- Compare each asset to its own immediately preceding available trading-day observation. Treasury and equity calendars can differ. A missing response alone does not prove a holiday: verify the calendar or disclose missing data.
+
+## Retrieve prices and yields with Massive
+
+Discover the current Massive tools by name and description. Call `search_endpoints(path=...)` for the configured paths before `call_api`; verify the current schema rather than performing open-ended discovery or inventing endpoint fields. Rediscover alternatives only if the configured path is unavailable or has changed. Batch independent requests when supported.
+
+### SPY and QQQ
+
+- Retrieve both target-session and preceding-session regular-hours closes for SPY and QQQ. Use daily historical data, not a current snapshot or a relative previous-close endpoint when reporting a specific date.
+- Endpoint discovered during creation: `/v1/open-close/{stocksTicker}/{date}` with `adjusted=true`; use `close`, `from`, and `symbol`. Ignore `preMarket` and `afterHours` for the headline. A discovered daily aggregate range endpoint is also suitable when it returns comparable completed session closes.
+- Use the same split-adjustment convention for both observations. Daily price change is `close - prior_close`; daily percent change is `(close / prior_close - 1) * 100`. Calculate from unrounded data, then round USD and percent changes to two decimals and show signs. Do not use open-to-close returns or imply dividend-inclusive total returns.
+- Identify SPY as the S&P 500 ETF proxy and QQQ as the Nasdaq-100 ETF proxy. Do not label QQQ as the Nasdaq Composite or claim these ETFs measure market breadth.
+- Report closing price, dollar change, and percent change in two side-by-side ETF cards. Add one brief sentence about relative performance when useful.
+
+### US Treasury yields
+
+- Use Massive first. Endpoint discovered during creation: `/fed/v1/treasury-yields`. Query a date-bounded range ending on the target date, sorted descending, with sufficient records to identify the target and preceding available observations. Verify dates and missing fields.
+- Use `yield_2_year`, `yield_10_year`, and `yield_30_year`. Treat these as daily constant-maturity observations, not live executable Treasury quotes or necessarily equity-close timestamps.
+- Report yield levels in percent and day-over-day changes in basis points. For yields expressed in percent, calculate `change_bp = (yield - prior_yield) * 100`; e.g., 4.20% to 4.25% is +5 bp. Missing values are not zero.
+- Optionally add the 10-year minus 2-year spread in bp and its change when it explains a material curve move. Do not confuse rising yields with rising bond prices.
+- If Massive yield data are unavailable, stale, or permission-limited, try official US Treasury daily par yield rates or Federal Reserve H.15/FRED constant-maturity series (DGS2, DGS10, DGS30). Name the fallback and observation date. Compute changes within a consistent source and series, never splice sources silently.
+- If target-date yields are not yet published, label the latest available date and its comparison date. Do not present an older observation as the target date or use a later observation to fill a historical gap.
+
+## Verify the day's events and news
+
+- Browse the web for the exact target US date, using recent-event search where appropriate. Confirm release/event dates as distinct from article publication dates. For historical recaps, use information available by the end of the reporting day; avoid hindsight and later revisions presented as original results.
+- Check official calendars and releases for Federal Reserve rate decisions/minutes, CPI/PPI and employment (BLS), PCE/GDP (BEA), retail sales (Census), jobless claims (Labor Department), ISM manufacturing/services surveys, and S&P Global flash/final PMIs. Cover only events that occurred on the reporting day, prioritizing those with market relevance.
+- For relevant releases, give actual, consensus if reliably sourced, and prior when available, with units, reference period, headline/core distinction, and revisions. Label survey provider and flash/final vintage. Never manufacture consensus or treat a prior value as a forecast; omit unavailable comparisons or mark them unavailable.
+- For a rate decision, state the resulting target range, the size/direction of change in bp, and the key guidance. Include other central-bank decisions only if materially relevant to US markets.
+- Add material earnings, policy, geopolitical, or company news only when it helps explain broad-market moves. Use official releases for facts and reliable contemporaneous financial reporting for market reaction. Massive news endpoints may supplement coverage but do not replace verification of macro releases.
+- Select the two most important verified event/news items for the image; retain additional detail only if specifically requested. Distinguish reported explanations from inference: use “coincided with” unless evidence supports a stronger causal claim. Do not attribute the entire day's move to one release without support.
+- If no major scheduled US releases occurred, say so only after checking calendars. If verification is incomplete, state that no major releases were verified rather than asserting none occurred. Never fill this section with upcoming events.
+
+## Add breadth, sectors, and risk context
+
+Use Massive first for these market data too, discovering supported endpoints and instrument identifiers before requesting them. Use the same completed equity session and comparable prior-session observations as the headline where applicable. Label differing session dates and observation times rather than implying synchronized closes.
+
+### Market breadth and sectors
+
+- Prefer a verified daily advancing/declining count or percentage of advancing constituents for a named universe (e.g., NYSE-listed issues or S&P 500 constituents). Identify the universe, date, source, treatment of unchanged issues, and denominator. Do not build a supposedly complete universe from a partial or unfiltered API result; account for pagination and missing observations.
+- If reliable breadth counts are unavailable, use RSP versus SPY daily price returns as an explicitly labeled equal-weight-versus-cap-weight participation proxy. Report the return gap in percentage points. Do not call that gap an advance/decline statistic or treat it as proof that a few stocks caused the move. If neither is available, say breadth is unavailable.
+- Compare all 11 US sector ETF proxies for the same session using comparable closes: XLB, XLC, XLE, XLF, XLI, XLK, XLP, XLRE, XLU, XLV, and XLY. Verify the ticker/sector mapping. Name the strongest and weakest sector and their daily percent changes; label them ETF proxies. If coverage is incomplete, name the observed subset and say “among sectors checked,” never rank it as the full market.
+- Compress the result to one or two sentences explaining whether participation was broad or concentrated only to the extent supported by the evidence.
+
+### Risk indicators
+
+Read [risk-sentiment.md](risk-sentiment.md) for CNN Fear & Greed retrieval, dated observations, the lavender gauge, VIX bands, and 252-return historical context. Use its structured inputs and deterministic calculations; never use the review images’ illustrative values.
+
+- Add the Fear & Greed gauge above a four-row context table with VIX, the US dollar, oil, and gold: named benchmark, level with units, and daily change. Use VIX index level and change in index points; use percentage changes for the other three.
+- Prefer the actual VIX index, DXY US Dollar Index, WTI crude (USD/barrel), and gold spot (USD/troy ounce) when accessible. Verify identifiers, dates, and quotation conventions. Never label a volatility ETF as VIX or a broad trade-weighted dollar series as DXY.
+- Use a named reliable alternative source if Massive does not cover a benchmark. If necessary, use clearly labeled liquid ETF proxies (such as UUP for the dollar, USO for oil, and GLD for gold), quote ETF prices in USD/share, and do not describe them as the underlying benchmark. Do not silently switch between spot, futures, and ETFs or compare unlike instruments.
+- For futures, identify the contract and settlement/close convention. Compare the same contract across observations and flag rollover effects where relevant. For FX, commodities, and indices, use consistent daily cutoffs and disclose when dates differ from equities. Never mix a live quote with a prior session close as a daily completed-session return.
+- Add commentary only when a move is notable in its verified recent context or directly relevant to the day's news. Do not invent historical percentiles or declare significance from an arbitrary threshold. Missing indicators must be marked unavailable, not omitted without explanation.
+
+## Add the next-session calendar
+
+- Keep this forward-looking section separate from “What happened.” For a current morning briefing, identify the next US equity session that has not begun as of retrieval, including Monday/holiday adjustments; include material pre-market releases for that session. For an explicitly historical recap, anchor the calendar to the next session after the report date and describe events as they were scheduled then, without hindsight.
+- Verify official publisher calendars and select the top 2–3 relevant upcoming releases, central-bank events, or major earnings. Do not pad a quiet calendar with low-impact items. If no major items are verified, say so and identify the next verified major event if useful.
+- Give each event's Hong Kong calendar date and time (HKT, Asia/Hong_Kong), converting from the verified source timezone with IANA timezone rules. Include the date rollover for events that occur after midnight HKT. Do not hardcode a 12- or 13-hour offset; DST changes can fall between sessions. If only “before market” or “after close” is confirmed, retain that label instead of inventing an exact time.
+- Exclude events already completed at retrieval from the upcoming list. Include consensus only if verified, and never supply actual results for an event still in the future relative to the briefing.
+
+## Interpret the combined moves
+
+Give one cautious sentence synthesizing equity participation, Treasury yields, and risk indicators. Explicitly label an inference (e.g., “Taken together, this suggests…”), distinguish it from sourced facts, and acknowledge mixed signals where appropriate. Do not force a risk-on/risk-off narrative or imply a forecast or trading recommendation. Avoid repeating this sentence elsewhere.

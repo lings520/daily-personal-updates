@@ -1,3 +1,15 @@
+# Resumable workflow refactor
+
+Verified on 2026-11-01: **62 pipeline/context/workflow tests and 3 schedule tests passed**. Skill frontmatter validation passed. The new tests exercise missing-input pauses, failed-stage recovery, input/plan tampering, cached reruns, render-only retries, palette changes, revised-data research checks, current-artifact review/delivery receipts, and shared threshold configuration. Existing arithmetic and source/date checks remain covered.
+
+An independent fixture trial completed the documented workflow and inspected both image sizes. A palette-only revision reused collection, normalization, research and composition; metrics and snapshot stayed byte-identical. Its revised render took 3.580 seconds, excluding fresh source retrieval/research. A separate comparison confirmed the default refactored renderer produced a pixel-identical image for the approved pre-refactor payload (1200 × 3038).
+
+A fresh Massive daily-summary request for SPY on 2026-10-30 succeeded; this was a connector connectivity/schema smoke check, not a full live workflow timing benchmark.
+
+The scheduled task delegates to one installed skill and one workflow entry point. The runtime still performs authenticated retrieval, research, inspection and actual publication. Recording a receipt does not independently establish external delivery. Tests do not claim a measured live end-to-end speed improvement; any local fixture timings exclude real network research.
+
+---
+
 # Editorial typography and risk-context update
 
 Verified on 2026-11-01: **49 pipeline/context tests and 3 schedule tests passed**; installed skill frontmatter validation passed. Tests cover the full CLI-to-PNG workflow, VIX boundaries, 252-prior-return percentile calculation, tie handling, insufficient history, source/contract/cutoff mismatches, future or duplicate dates, sentinel missing values, sentiment timestamps and illustrative-data safeguards. The approved renderer now uses Bookman headings, Nimbus Sans body and a lavender sentiment gauge.

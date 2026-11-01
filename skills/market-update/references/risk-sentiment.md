@@ -1,5 +1,7 @@
 # Risk & sentiment
 
+`config/risk-context.json` is authoritative for lookback and thresholds; `config/visual-style.json` controls the palette. Values below describe the approved defaults. Change settings in configuration, not duplicated code or task prompts.
+
 ## Retrieval and provenance
 
 Use the CNN **US equity** Fear & Greed Index, never the similarly named crypto index. Check https://www.cnn.com/markets/fear-and-greed for the target date's score, published rating, timestamp and previous observation. If the primary source is inaccessible, try one credible dated secondary source that explicitly attributes the score to CNN. Cite the actual retrieved source. Do not reconstruct the proprietary index or infer its score from VIX. On failure, retain the gauge with “Target-date score unavailable”; do not repeatedly probe blocked endpoints. A past date requires that date's observation, never today's live score. An older observation may be shown only with the prominent STALE date label. Preserve published vintage; do not use later revisions as historical known-at-the-time facts.

@@ -2,6 +2,7 @@
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from zoneinfo import ZoneInfo
+from settings import load as load_settings, validate as validate_settings
 
 
 def check(ok, message):
@@ -19,11 +20,16 @@ def num(value):
     return result
 
 
-def risk_badge(slot, item):
+def risk_badge(slot, item, config=None):
+    config = config or load_settings('risk-context')
+    validate_settings('risk-context', config)
+    lookback = config['lookback_returns']
+    a,b,c = config['vix_bounds']
+    low,high = config['move_percentile_bounds']
     check('percentile' not in item, 'Supply raw history, not an authored percentile')
     if slot == 'vix':
         v = num(item['level'])
-        label, tone = ('SUBDUED','mint') if v < 15 else ('MODERATE','lavender') if v < 20 else ('ELEVATED','peach') if v < 30 else ('HIGH','rose')
+        label, tone = ('SUBDUED','mint') if v < a else ('MODERATE','lavender') if v < b else ('ELEVATED','peach') if v < c else ('HIGH','rose')
         return {'label': label, 'tone': tone}
     h = item.get('history')
     unavailable = {'label': 'UNAVAILABLE', 'tone': 'muted'}
@@ -42,16 +48,16 @@ def risk_badge(slot, item):
     check(all(d <= prior for d in dates), 'History contains current/future observations')
     if rows:
         check(dates[-1] == prior and levels[-1] == num(item['prior_level']), 'History must end at the matching prior observation')
-    if len(rows) < 253:
+    if len(rows) < lookback+1:
         return unavailable
-    levels = levels[-253:]
+    levels = levels[-(lookback+1):]
     changes = [abs(b/a-1) for a,b in zip(levels,levels[1:])]
     current = abs(num(item['level'])/num(item['prior_level'])-1)
     # Midrank handles ties without declaring a zero move extreme in a flat series.
-    percentile = (sum(v < current for v in changes) + Decimal('0.5')*sum(v == current for v in changes))*100/252
-    label,tone = ('TYPICAL','lavender') if percentile < 90 else ('LARGE','peach') if percentile < 97 else ('EXTREME','rose')
+    percentile = (sum(v < current for v in changes) + Decimal('0.5')*sum(v == current for v in changes))*100/lookback
+    label,tone = ('TYPICAL','lavender') if percentile < low else ('LARGE','peach') if percentile < high else ('EXTREME','rose')
     return {'label': label+' · P'+str(int(percentile.quantize(Decimal('1')))), 'tone': tone,
-            'percentile': float(percentile), 'lookback_returns': 252}
+            'percentile': float(percentile), 'lookback_returns': lookback}
 
 
 def fear_greed(item, plan, cite):
@@ -81,3 +87,10 @@ def fear_greed(item, plan, cite):
         change = f'{score-prior:+.1f} pts vs '+item['prior_date']
     return {'status':'ok','title':'CNN FEAR & GREED '+cite(item['source_ids']),
             'score':float(score),'rating':rating.upper(),'change':change,'note':note}
+
+
+def reference_legend(config=None):
+    config = config or load_settings('risk-context')
+    a,b,c = config['vix_bounds'];low,high = config['move_percentile_bounds']
+    return (f'VIX: <{a} subdued; {a}–<{b} moderate; {b}–<{c} elevated; ≥{c} high.\n'
+            f'P: <{low} typical; {low}–<{high} large; ≥{high} extreme. Display conventions, not trade signals.')

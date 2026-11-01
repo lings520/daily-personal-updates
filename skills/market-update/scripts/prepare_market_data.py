@@ -257,7 +257,7 @@ def citations(ids, sources):
     return ' '.join('['+str(k)+']' for k in dict.fromkeys(ids))
 
 
-def risk_rows(metrics, editorial, sources):
+def risk_rows(metrics, editorial, sources, risk_config=None):
     from risk_context import risk_badge
     result, notes = [], []
     cfg, report = metrics['plan']['config'], metrics['plan']['report_date']
@@ -289,7 +289,7 @@ def risk_rows(metrics, editorial, sources):
         label = spec['name']+' · '+instrument+' ETF proxy' if proxy else instrument
         refs = citations(item['source_ids'], sources)
         delta = fmt(current-prior, signed=True)+' pts' if slot == 'vix' else fmt((current/prior-1)*100, signed=True)+'%'
-        result.append({'cells': [label+' '+refs, fmt(current)+' '+unit, delta], 'context': risk_badge(slot, item)})
+        result.append({'cells': [label+' '+refs, fmt(current)+' '+unit, delta], 'context': risk_badge(slot, item, risk_config)})
         notes.append(spec['name']+': '+day.isoformat()+' vs '+prior_day.isoformat()+'; '+item['cutoff'])
     return result, notes
 
@@ -325,7 +325,10 @@ def event_rows(plan, editorial, sources):
     return rows or [{'hkt': '—', 'event': 'No upcoming events verified', 'watch': 'Calendar verification incomplete'}]
 
 
-def compose(metrics, editorial):
+def compose(metrics, editorial, risk_config=None):
+    from settings import load as load_settings, validate as validate_settings
+    risk_config = risk_config or load_settings('risk-context')
+    validate_settings('risk-context', risk_config)
     # Recompute from preserved observations; edited derived metrics cannot bypass checks.
     require(metrics == normalize(metrics['plan'], metrics['inputs']['equities'], metrics['inputs']['treasuries'], metrics['sources']['2'], metrics['sources']['1']),
             'Metrics were edited after normalization; rebuild from the preserved observations')
@@ -372,7 +375,7 @@ def compose(metrics, editorial):
             tied = [r['ticker'] for r in ordered if r['change_pct'] == edge['change_pct']]
             if len(tied) > 1:
                 sectors[label] += ' (tied)'
-    risk, risk_notes = risk_rows(metrics, editorial, sources)
+    risk, risk_notes = risk_rows(metrics, editorial, sources, risk_config)
     from risk_context import fear_greed
     sentiment = fear_greed(editorial.get('fear_greed'), plan, lambda ids: citations(ids, sources))
     news = []
@@ -402,7 +405,7 @@ def compose(metrics, editorial):
     snapshot = {'schema_version': 3, 'example': plan['example'], 'report_date': plan['report_date']+' · US/EASTERN'+(' · FICTIONAL TEST' if plan['example'] else ''),
                 'headline': editorial['headline'], 'interpretation': editorial['interpretation'], 'session_note': note,
                 'equities': equities, 'yields': yields, 'breadth': breadth, 'sectors': sectors, 'risk': risk,
-                'fear_greed': sentiment, 'news': news, 'upcoming': event_rows(plan, editorial, sources), 'footer': footer, 'sources': sources,
+                'risk_configuration': risk_config, 'fear_greed': sentiment, 'news': news, 'upcoming': event_rows(plan, editorial, sources), 'footer': footer, 'sources': sources,
                 'data_warnings': metrics['warnings']}
     # Import lazily: planning and numeric processing need only the standard library.
     from render_snapshot import validate
