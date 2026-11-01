@@ -1,0 +1,18 @@
+{
+  "fixture": true,
+  "status": "OK",
+  "results": [
+    {
+      "date": "2026-10-30",
+      "yield_2_year": 4.1,
+      "yield_10_year": 4.3,
+      "yield_30_year": 4.5
+    },
+    {
+      "date": "2026-10-29",
+      "yield_2_year": 4.15,
+      "yield_10_year": 4.32,
+      "yield_30_year": 4.48
+    }
+  ]
+}

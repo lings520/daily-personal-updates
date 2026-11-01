@@ -3,6 +3,7 @@
 import argparse
 import json
 import re
+from datetime import date
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
@@ -222,6 +223,24 @@ def validate(data):
             raise ValueError(name+' must be a nonempty string')
     for key in ['report_date','headline','interpretation','session_note']:
         string(data.get(key),key)
+    if not data.get('example', False):
+        if not re.match(r'^\d{4}-\d{2}-\d{2}\b', data['report_date']):
+            raise ValueError('report_date must start with an ISO date; set example=true only for fictional tests')
+        date.fromisoformat(data['report_date'][:10])
+    sources = data.get('sources', {})
+    if not isinstance(sources, dict):
+        raise ValueError('sources must map numeric source keys to metadata')
+    def check_citations(value):
+        if isinstance(value,str):
+            for key in re.findall(r'\[(\d+)\]',value):
+                if key not in sources:
+                    raise ValueError('Unmapped source citation: ['+key+']')
+        elif isinstance(value,list):
+            for child in value:check_citations(child)
+        elif isinstance(value,dict):
+            for key,child in value.items():
+                if key != 'sources':check_citations(child)
+    check_citations(data)
     if len((data['headline']+' '+data['interpretation']).split())>40:
         raise ValueError('Headline and interpretation must be at most 40 words combined')
     for key,count in [('equities',2),('yields',3),('risk',4)]:
@@ -234,6 +253,18 @@ def validate(data):
             for cell in row['cells']:string(cell,key)
             if row.get('tone','neutral') not in ['up','down','neutral']:
                 raise ValueError('Invalid numeric tone')
+    for row,ticker in zip(data['equities'],['SPY','QQQ']):
+        if not re.match(r'^'+ticker+r'\b',row['cells'][0]):
+            raise ValueError('Equity cards must be SPY then QQQ, with no duplicates')
+        value = row['cells'][1]
+        if value != 'Unavailable' and not re.fullmatch(r'\$?\d+(?:,\d{3})*(?:\.\d+)?', value):
+            raise ValueError('Equity price must be numeric USD or Unavailable')
+    for row,maturity in zip(data['yields'],['2Y','10Y','30Y']):
+        if not re.match(r'^'+maturity+r'\b',row['cells'][0]):
+            raise ValueError('Yield cards must be 2Y, 10Y, 30Y')
+        value = row['cells'][1]
+        if value != 'Unavailable' and not re.fullmatch(r'[+−-]?\d+(?:\.\d+)?%',value):
+            raise ValueError('Yield level must be numeric percent or Unavailable')
     for key,maximum in [('breadth',2),('footer',5)]:
         if not isinstance(data.get(key),list) or not 1<=len(data[key])<=maximum:
             raise ValueError(f'{key} requires 1–{maximum} strings')

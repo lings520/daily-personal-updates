@@ -1,0 +1,65 @@
+{
+  "headline": "Fictional equities decline while Treasury yields diverge",
+  "interpretation": "The sample suggests uneven participation; these fictional figures demonstrate the briefing format, not market conditions.",
+  "sources": {
+    "3": {
+      "name": "Fictional release/calendar",
+      "kind": "fixture",
+      "url": "https://example.org/fictional-calendar"
+    }
+  },
+  "risk": {
+    "vix": {
+      "instrument": "VIX",
+      "level": 20,
+      "prior_level": 19,
+      "date": "2026-10-30",
+      "prior_date": "2026-10-29",
+      "cutoff": "index close",
+      "source_ids": [
+        "3"
+      ]
+    },
+    "dollar": {
+      "use_etf_proxy": true,
+      "reason": "Fictional benchmark unavailable"
+    },
+    "oil": {
+      "use_etf_proxy": true,
+      "reason": "Fictional benchmark unavailable"
+    },
+    "gold": {
+      "status": "unavailable"
+    }
+  },
+  "news": [
+    {
+      "date": "2026-10-30",
+      "text": "Fictional activity data matched the sample forecast.",
+      "sentiment": "neutral",
+      "source_ids": [
+        "3"
+      ]
+    }
+  ],
+  "upcoming": [
+    {
+      "at": "2026-11-02T10:00:00-05:00",
+      "timezone": "America/New_York",
+      "event": "Fictional activity survey",
+      "watch": "Orders and prices",
+      "source_ids": [
+        "3"
+      ]
+    },
+    {
+      "at": "2026-11-02T14:00:00-05:00",
+      "timezone": "America/New_York",
+      "event": "Fictional policy remarks",
+      "watch": "Policy guidance",
+      "source_ids": [
+        "3"
+      ]
+    }
+  ]
+}

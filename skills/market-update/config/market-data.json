@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "report_timezone": "Asia/Hong_Kong",
+  "market_timezone": "America/New_York",
+  "equities": {"SPY": "S&P 500", "QQQ": "Nasdaq-100"},
+  "participation_proxy": "RSP",
+  "sectors": {
+    "XLB": "Materials", "XLC": "Communication", "XLE": "Energy",
+    "XLF": "Financials", "XLI": "Industrials", "XLK": "Technology",
+    "XLP": "Consumer staples", "XLRE": "Real estate", "XLU": "Utilities",
+    "XLV": "Health care", "XLY": "Consumer discretionary"
+  },
+  "risk": {
+    "vix": {"name": "VIX", "preferred": "VIX index", "unit": "pts", "change": "points"},
+    "dollar": {"name": "Dollar", "preferred": "DXY", "unit": "pts", "change": "percent", "proxy": "UUP"},
+    "oil": {"name": "Oil", "preferred": "WTI", "unit": "USD/bbl", "change": "percent", "proxy": "USO"},
+    "gold": {"name": "Gold", "preferred": "Gold spot", "unit": "USD/oz", "change": "percent", "proxy": "GLD"}
+  },
+  "treasury_fields": {"2Y": "yield_2_year", "10Y": "yield_10_year", "30Y": "yield_30_year"},
+  "queries": {
+    "equities": {"path": "/v2/aggs/grouped/locale/us/market/stocks/{date}", "params": {"adjusted": true, "include_otc": false}},
+    "equity_fallback": {"path": "/v1/open-close/{ticker}/{date}", "params": {"adjusted": true}},
+    "treasuries": {"path": "/fed/v1/treasury-yields", "lookback_days": 21, "params": {"sort": "date.desc", "limit": 100}}
+  },
+  "fallbacks": {
+    "treasuries": ["US Treasury daily par yield rates", "Federal Reserve H.15 / FRED DGS2,DGS10,DGS30"],
+    "risk": ["Verified named benchmark source", "Explicitly labelled ETF proxy", "Unavailable"]
+  },
+  "calendar_source": "https://www.nyse.com/trade/hours-calendars"
+}

@@ -15,9 +15,17 @@ Lead with one factual, source-backed market snapshot PNG, readable at a glance, 
 - On weekends or US equity holidays, say that equities were closed and show the latest completed session on or before the target date as context, with its actual date. Keep the news window on the target calendar date. If the target-day news is quiet, briefly add separately dated context from the last session only when useful.
 - Compare each asset to its own immediately preceding available trading-day observation. Treasury and equity calendars can differ. A missing response alone does not prove a holiday: verify the calendar or disclose missing data.
 
+## Run the fixed data pipeline
+
+Read [references/data-pipeline.md](references/data-pipeline.md) and use the bundled `scripts/prepare_market_data.py` for every run. Run `plan` to resolve dates and produce fixed Massive requests plus SQL, execute those requests through the connected Massive tools, then run `normalize` on the saved responses. Resolve its follow-ups with the specified fallback sources, and use `compose` to combine verified metrics with sourced news, risk benchmarks, and calendar events. Never hand-calculate or hand-edit generated numeric cards. Use `tests/fixtures/` only for explicitly fictional offline tests.
+
+Use `config/market-data.json` for instrument mappings, endpoint templates and fallback order; use `config/us-equity-calendar.json` for verified scheduled equity sessions. Verify exceptional exchange closures each run, and refresh the calendar from its official source when needed. The script refuses uncovered years; do not extrapolate holidays. Treasury observations use their own available dates. Preserve raw responses and query parameters in the current run directory for inspection, not in the installed skill or public repository.
+
+The normal path uses two date-specific grouped equity requests, one fixed SQL filter for the required ETFs, and one bounded Treasury query. Keep the grouped tables in Massive and return only the filtered rows. Preserve the workspace handle and inspect the reported schema; Massive renames `t` to `t_2` to distinguish it from `T`. If a grouped request is unavailable, use the configured per-ticker fallback for the same dates and adjustment convention. Missing data must remain visible; do not treat missing responses as holiday evidence.
+
 ## Retrieve prices and yields with Massive
 
-Discover the current Massive tools by name and description. Call `search_endpoints` before `call_api`; verify the current schema rather than inventing endpoints or field names. Batch independent requests when supported.
+Discover the current Massive tools by name and description. Call `search_endpoints(path=...)` for the configured paths before `call_api`; verify the current schema rather than performing open-ended discovery or inventing endpoint fields. Rediscover alternatives only if the configured path is unavailable or has changed. Batch independent requests when supported.
 
 ### SPY and QQQ
 
@@ -78,7 +86,7 @@ Give one cautious sentence synthesizing equity participation, Treasury yields, a
 
 ## Render and deliver the snapshot
 
-Use the bundled `scripts/render_snapshot.py` and the instructions in [references/image-format.md](references/image-format.md). Render precise data programmatically from the verified payload, not with generative image text. Use this top-to-bottom order inside one image:
+Use the `compose` output with bundled `scripts/render_snapshot.py` and the instructions in [references/image-format.md](references/image-format.md). Render precise data programmatically from the verified payload, not with generative image text. Use this top-to-bottom order inside one image:
 
 1. **Header:** exact report date (US/Eastern), a prominent factual headline, and a clearly labeled one-sentence interpretation immediately beneath it, at most 40 words combined. State the actual equity session/comparison dates and any market-closed context.
 2. **US equities:** SPY and QQQ closing prices in USD and signed dollar/percent changes.

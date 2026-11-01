@@ -1,6 +1,6 @@
 # Market snapshot image
 
-Use the bundled renderer for an exact, repeatable PNG layout. It uses Pillow and renders supplied text verbatim; it does not fetch, calculate, infer, or validate market facts. Complete source verification and calculations before building its input. Use another deterministic HTML/SVG/chart renderer only if this renderer is unavailable; follow the same design and visual QA rules. Do not generate factual numbers, labels, or headlines with a generative image model.
+Use the bundled renderer for an exact, repeatable PNG layout. It uses Pillow and renders supplied text verbatim; it does not fetch, calculate, infer, or validate market facts. Use `prepare_market_data.py normalize` and `compose` from [data-pipeline.md](data-pipeline.md) to validate observations, perform calculations and build its input; complete independent source verification for prose and events. Use another deterministic HTML/SVG/chart renderer only if this renderer is unavailable; follow the same design and visual QA rules. Do not generate factual numbers, labels, or headlines with a generative image model.
 
 ## Approved visual style
 
@@ -14,7 +14,7 @@ Use the dreamy design approved in this conversation: soft sky-blue/lavender back
 
 ## Prepare the payload
 
-Write a UTF-8 JSON object in the current run's scratch workspace. Never write daily outputs or data into the installed skill directory. Required fields:
+Write a UTF-8 JSON object in the current run's scratch workspace. Never write daily outputs or data into the installed skill directory. The pipeline emits schema version 2 and a `sources` map. Every `[n]` marker must resolve to that map; retain it alongside the image for caption links. Set `example: true` only for clearly labelled fictional tests. Required display fields:
 
 | Field | Content |
 |---|---|

@@ -4,13 +4,48 @@
   "interpretation": "The fictional moves suggest improved risk appetite, though participation was uneven.",
   "session_note": "Fictional session and comparison; values are not market data.",
   "equities": [
-    {"cells": ["SPY · S&P 500", "101.00", "+$1.00 / +1.00%"], "tone": "up"},
-    {"cells": ["QQQ · Nasdaq-100", "202.00", "+$2.00 / +1.00%"], "tone": "up"}
+    {
+      "cells": [
+        "SPY · S&P 500",
+        "101.00",
+        "+$1.00 / +1.00%"
+      ],
+      "tone": "up"
+    },
+    {
+      "cells": [
+        "QQQ · Nasdaq-100",
+        "202.00",
+        "+$2.00 / +1.00%"
+      ],
+      "tone": "up"
+    }
   ],
   "yields": [
-    {"cells": ["2Y", "4.10%", "−5 bp"], "tone": "neutral"},
-    {"cells": ["10Y", "4.30%", "−2 bp"], "tone": "neutral"},
-    {"cells": ["30Y", "Unavailable", "Unavailable"], "tone": "neutral"}
+    {
+      "cells": [
+        "2Y",
+        "4.10%",
+        "−5 bp"
+      ],
+      "tone": "neutral"
+    },
+    {
+      "cells": [
+        "10Y",
+        "4.30%",
+        "−2 bp"
+      ],
+      "tone": "neutral"
+    },
+    {
+      "cells": [
+        "30Y",
+        "Unavailable",
+        "Unavailable"
+      ],
+      "tone": "neutral"
+    }
   ],
   "breadth": [
     "Fictional participation proxy: RSP +0.50%.",
@@ -22,21 +57,62 @@
     "coverage": "Fictional illustration; not a complete sector ranking."
   },
   "risk": [
-    {"cells": ["VIX index", "19.00 pts", "−1.00 pt"]},
-    {"cells": ["Dollar index", "101.00 pts", "+0.10%"]},
-    {"cells": ["Oil · USO ETF proxy", "70.00 USD/share", "+1.00%"]},
-    {"cells": ["Gold · GLD ETF proxy", "200.00 USD/share", "−0.50%"]}
+    {
+      "cells": [
+        "VIX index",
+        "19.00 pts",
+        "−1.00 pt"
+      ]
+    },
+    {
+      "cells": [
+        "Dollar index",
+        "101.00 pts",
+        "+0.10%"
+      ]
+    },
+    {
+      "cells": [
+        "Oil · USO ETF proxy",
+        "70.00 USD/share",
+        "+1.00%"
+      ]
+    },
+    {
+      "cells": [
+        "Gold · GLD ETF proxy",
+        "200.00 USD/share",
+        "−0.50%"
+      ]
+    }
   ],
   "news": [
-    {"text": "Fictional company outlooks supported equities.", "sentiment": "positive", "label": "SUPPORTIVE · EARNINGS"},
-    {"text": "Fictional inflation data matched expectations.", "sentiment": "neutral", "label": "NEUTRAL · IN LINE"}
+    {
+      "text": "Fictional company outlooks supported equities.",
+      "sentiment": "positive",
+      "label": "SUPPORTIVE · EARNINGS"
+    },
+    {
+      "text": "Fictional inflation data matched expectations.",
+      "sentiment": "neutral",
+      "label": "NEUTRAL · IN LINE"
+    }
   ],
   "upcoming": [
-    {"hkt": "3 Nov 2026\n23:00", "event": "Fictional economic release", "watch": "Activity and prices"},
-    {"hkt": "4 Nov 2026\n03:00", "event": "Fictional central-bank remarks", "watch": "Policy guidance"}
+    {
+      "hkt": "3 Nov 2026\n23:00",
+      "event": "Fictional economic release",
+      "watch": "Activity and prices"
+    },
+    {
+      "hkt": "4 Nov 2026\n03:00",
+      "event": "Fictional central-bank remarks",
+      "watch": "Policy guidance"
+    }
   ],
   "footer": [
     "FICTIONAL EXAMPLE · All prices, events, and conclusions are illustrative.",
     "No sources or real market data were used in this example."
-  ]
+  ],
+  "example": true
 }
