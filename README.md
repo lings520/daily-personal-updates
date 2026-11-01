@@ -4,9 +4,9 @@ Skills, instructions, and task definitions for concise personal briefings. The f
 
 ## Market update
 
-The `market-update` skill prepares a source-backed daily snapshot covering SPY and QQQ, US Treasury yields, market breadth and sector performance, VIX and other risk indicators, major economic news, and the next US session's calendar in Hong Kong time. It uses Massive first for market data and names any fallback sources.
+The `market-update` skill prepares a source-backed daily snapshot covering SPY and QQQ, US Treasury yields, market breadth and sector performance, VIX, CNN Fear & Greed and other risk indicators, major economic news, and the next US session's calendar in Hong Kong time. It uses Massive first for market data and names any fallback sources.
 
-The primary output is a portrait PNG with a headline, a clearly labelled interpretation, a dreamy pastel palette, sentiment-labelled news cards, an HKT events table, and small monospaced citations. A short accessible summary and source links accompany the image.
+The primary output is a portrait PNG with a headline, a clearly labelled interpretation, a dreamy pastel palette, Bookman headings with Nimbus Sans body text, a lavender Fear & Greed gauge, computed risk-context badges, sentiment-labelled news cards, an HKT events table, and small monospaced citations. A short accessible summary and source links accompany the image.
 
 ## What's here
 
@@ -47,7 +47,7 @@ python3 skills/market-update/scripts/render_snapshot.py \
   --preview output/example-preview.png
 ```
 
-The sample is fictional. The renderer needs accessible DejaVu Sans or Liberation Sans fonts, or font paths supplied through its command-line options. See [image-format.md](skills/market-update/references/image-format.md) for the payload and visual review instructions.
+The sample is fictional. Approved typography B uses URW Bookman Demi headings/bold values, Nimbus Sans body text, and DejaVu Sans Mono citations/footer. Install `fonts-urw-base35` and `fonts-dejavu-core` on Debian/Ubuntu, or supply font paths through the renderer options. Missing editorial fonts trigger a warning and a documented DejaVu/Liberation fallback. See [image-format.md](skills/market-update/references/image-format.md) for the payload and visual review instructions.
 
 ## Test the complete local pipeline
 
@@ -76,6 +76,12 @@ python3 "$SKILL_DIR/scripts/render_snapshot.py" \
 ```
 
 Fixtures exercise holidays, early closes, DST and HKT midnight rollovers, stale/null yields, missing sectors, inconsistent units and dates, and citation validation. They are **never inputs to a real daily update**. Generated reports and raw data belong under ignored `output/` or outside this public repository. See [VALIDATION.md](VALIDATION.md) for the latest recorded validation and its limits.
+
+## Risk and sentiment
+
+Read [risk-sentiment.md](skills/market-update/references/risk-sentiment.md) for retrieval and the input contract. The CNN US equity Fear & Greed gauge uses pale-to-deep lavender, a dark marker, the published label, point change and observation timestamp. Unverified scores remain unavailable; older scores are visibly dated.
+
+VIX badges use labelled display bands. Dollar, oil and gold badges compare the absolute daily return with 252 prior returns from the same source/instrument/cutoff. The Python module calculates midrank percentiles, excludes the current observation, and rejects mismatched or malformed history. With insufficient history it displays context unavailable rather than a made-up percentile. These are descriptive conventions, not trading signals. Review-image scores and P53/P93/P98 examples are never live inputs.
 
 ## Scheduled task
 

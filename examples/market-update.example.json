@@ -62,7 +62,11 @@
         "VIX index",
         "19.00 pts",
         "−1.00 pt"
-      ]
+      ],
+      "context": {
+        "label": "MODERATE",
+        "tone": "lavender"
+      }
     },
     {
       "cells": [
@@ -114,5 +118,13 @@
     "FICTIONAL EXAMPLE · All prices, events, and conclusions are illustrative.",
     "No sources or real market data were used in this example."
   ],
-  "example": true
+  "example": true,
+  "fear_greed": {
+    "status": "ok",
+    "title": "FICTIONAL FEAR & GREED",
+    "score": 42,
+    "rating": "FEAR",
+    "change": "−3.0 pts vs fictional prior",
+    "note": "FICTIONAL TEST · not a CNN observation"
+  }
 }

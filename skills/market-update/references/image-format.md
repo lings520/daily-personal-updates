@@ -4,9 +4,9 @@ Use the bundled renderer for an exact, repeatable PNG layout. It uses Pillow and
 
 ## Approved visual style
 
-Use the dreamy design approved in this conversation: soft sky-blue/lavender background with diffuse mint and blush, lightly tinted rounded cards, restrained shadows, and dark navy text. Put the headline first and the labelled interpretation in a lavender panel. Use two ETF cards, three yield cards, breadth plus labelled sector leader/laggard, a risk table, coloured news cards, and the upcoming-events table. Retain a clear hierarchy; decorative colour must not overpower the facts.
+Use the dreamy design approved in this conversation: soft sky-blue/lavender background with diffuse mint and blush, lightly tinted rounded cards, restrained shadows, and dark navy text. Put the headline first and the labelled interpretation in a lavender panel. Use two ETF cards, three yield cards, breadth plus labelled sector leader/laggard, a lavender Fear & Greed gauge and risk-context table, coloured news cards, and the upcoming-events table. Retain a clear hierarchy; decorative colour must not overpower the facts.
 
-- Main font: DejaVu Sans or a close sans serif; 27–30px body text and 39–46px primary values/headline at 1200px width.
+- Approved version B: URW Bookman Demi for headings/bold values and Nimbus Sans for regular body text; 27–30px body text and 39–46px primary values/headline at 1200px width.
 - Footer: 19px DejaVu Sans Mono or equivalent monospaced type, muted but readable, distinctly smaller than body copy.
 - Inline citations: write ordinary source keys such as `[1]` in the payload. The renderer styles them as monospaced superscripts at about 60% of surrounding text (14–19px), even in bold labels and tables. Keep them attached to the preceding word. Do not manually fake superscripts with Unicode digits, shrink the main text, or drop citations.
 - Sentiment: mint/green for supportive, blush/rose for adverse, lavender for neutral/mixed. Use a visible label as well as colour. Judge implications from verified evidence, not the sign of a statistic or a desire to balance colours. Matching consensus is ordinarily neutral; a lower yield or higher oil price is not automatically good or bad. Treat the tag as interpretation, never as a trading instruction.
@@ -14,7 +14,7 @@ Use the dreamy design approved in this conversation: soft sky-blue/lavender back
 
 ## Prepare the payload
 
-Write a UTF-8 JSON object in the current run's scratch workspace. Never write daily outputs or data into the installed skill directory. The pipeline emits schema version 2 and a `sources` map. Every `[n]` marker must resolve to that map; retain it alongside the image for caption links. Set `example: true` only for clearly labelled fictional tests. Required display fields:
+Write a UTF-8 JSON object in the current run's scratch workspace. Never write daily outputs or data into the installed skill directory. The pipeline emits schema version 3 and a `sources` map. Every `[n]` marker must resolve to that map; retain it alongside the image for caption links. Set `example: true` only for clearly labelled fictional tests. Required display fields:
 
 | Field | Content |
 |---|---|
@@ -24,6 +24,7 @@ Write a UTF-8 JSON object in the current run's scratch workspace. Never write da
 | `session_note` | Actual equity session and prior-session comparison dates; closed-session caveat where applicable |
 | `equities` | Exactly two rows: SPY and QQQ |
 | `yields` | Exactly three rows: 2Y, 10Y, 30Y |
+| `fear_greed` | Validated score/rating/change/observation note or explicit unavailable state; see [risk-sentiment.md](risk-sentiment.md) |
 | `risk` | Exactly four rows: VIX, dollar, oil, gold, with truthful benchmark/proxy names |
 | `breadth` | One or two concise strings describing the named breadth measure or participation proxy |
 | `sectors` | Object with `leader`, `laggard`, and `coverage` strings; include names, returns, proxy labels and source keys; state complete or partial coverage |
@@ -43,7 +44,7 @@ Structured examples (illustrative shapes, not current facts):
 
 Allowed news sentiments: `positive`, `negative`, `neutral`, `mixed`. A short optional label adds context, e.g. `ADVERSE · TECH SENTIMENT`; it must agree with the sentiment and must not exaggerate certainty. If no upcoming event is verified, use one neutral table row with `hkt: "—"`, an honest `event` status, and a `watch` explanation; do not invent a date. Do not combine two events in one row merely because they share a release time.
 
-Each numeric row is an object: `{"cells": ["label", "level with units", "daily change with sign and units"], "tone": "neutral"}`. Allowed tones are `up`, `down`, and `neutral`. Color is only a visual supplement to signed values; use neutral for Treasury/risk changes unless meaning is clearly explained. Always include missing rows with `Unavailable`, never a fabricated zero.
+Each numeric row is an object: `{"cells": ["label", "level with units", "daily change with sign and units"], "tone": "neutral"}`. Allowed numeric tones are `up`, `down`, and `neutral`. Risk rows also have a computed `context` object with a label and `mint`, `lavender`, `peach`, `rose` or `muted` tone; never author live percentile badges by hand. Color is only a visual supplement to signed values; use neutral for Treasury/risk changes unless meaning is clearly explained. Always include missing rows with `Unavailable`, never a fabricated zero.
 
 - Equities: prices in the two ETF cards are USD (the renderer adds `$` to bare numeric prices); change includes both dollar change and percent (e.g., `+$1.00 / +1.00%`). This example is illustrative, not live market data.
 - Yields: level has `%`; change has `bp`. Use `2Y`, `10Y`, `30Y` labels; put mismatched observation dates in footer or row label.
@@ -61,7 +62,7 @@ python3 "$SKILL_DIR/scripts/render_snapshot.py" "$RUN_DIR/snapshot.json" "$RUN_D
   --preview "$RUN_DIR/preview.png"
 ```
 
-Use available Pillow in the primary runtime when the default Python lacks it. The renderer uses DejaVu Sans or Liberation Sans; provide `--font-regular`, `--font-bold`, and `--font-mono` with available TrueType font paths if necessary. Do not install large dependencies merely for a screenshot if a supported local renderer already exists.
+Use available Pillow in the primary runtime when the default Python lacks it. The renderer prefers URW Bookman Demi and Nimbus Sans (fonts-urw-base35), with DejaVu Sans Mono for citations. It warns and uses DejaVu/Liberation fallbacks if unavailable; disclose this in delivery. provide `--font-regular`, `--font-bold`, and `--font-mono` with available TrueType font paths if necessary. Do not install large dependencies merely for a screenshot if a supported local renderer already exists.
 
 The renderer outputs a 1200px-wide portrait PNG with a measured height, 27–30px body text, a prominent headline, distinct small citation/footer typography, explicit signs, and high contrast. It rejects very long copy or unbreakable labels instead of shrinking text or truncating silently. If rejected, edit the copy and rerun. Keep the layout close to 2300–2800px tall where possible; 3200px is the upper bound. Prefer concise copy over unnecessary height.
 

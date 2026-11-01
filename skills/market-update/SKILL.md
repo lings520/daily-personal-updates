@@ -1,6 +1,6 @@
 ---
 name: market-update
-description: Produce a quick previous-day US market snapshot image in a dreamy pastel style with a headline and interpretation, using Massive for recent data, covering SPY and QQQ, US Treasury yields, market breadth and sectors, risk indicators, major economic events and news, and the next US session’s calendar in Hong Kong time. Use for daily market updates, yesterday's market movements, morning US market briefings, visual market snapshots, or a recap for a specified date.
+description: Produce a quick previous-day US market snapshot image in a dreamy pastel style with a headline and interpretation, using Massive for recent data, covering SPY and QQQ, US Treasury yields, market breadth and sectors, risk and sentiment indicators, major economic events and news, and the next US session’s calendar in Hong Kong time. Use for daily market updates, yesterday's market movements, morning US market briefings, visual market snapshots, or a recap for a specified date.
 ---
 
 # Market Update
@@ -67,7 +67,9 @@ Use Massive first for these market data too, discovering supported endpoints and
 
 ### Risk indicators
 
-- Add one compact line or four-row table with VIX, the US dollar, oil, and gold: named benchmark, level with units, and daily change. Use VIX index level and change in index points; use percentage changes for the other three.
+Read [references/risk-sentiment.md](references/risk-sentiment.md) for CNN Fear & Greed retrieval, dated observations, the lavender gauge, VIX bands, and 252-return historical context. Use its structured inputs and deterministic calculations; never use the review images’ illustrative values.
+
+- Add the Fear & Greed gauge above a four-row context table with VIX, the US dollar, oil, and gold: named benchmark, level with units, and daily change. Use VIX index level and change in index points; use percentage changes for the other three.
 - Prefer the actual VIX index, DXY US Dollar Index, WTI crude (USD/barrel), and gold spot (USD/troy ounce) when accessible. Verify identifiers, dates, and quotation conventions. Never label a volatility ETF as VIX or a broad trade-weighted dollar series as DXY.
 - Use a named reliable alternative source if Massive does not cover a benchmark. If necessary, use clearly labeled liquid ETF proxies (such as UUP for the dollar, USO for oil, and GLD for gold), quote ETF prices in USD/share, and do not describe them as the underlying benchmark. Do not silently switch between spot, futures, and ETFs or compare unlike instruments.
 - For futures, identify the contract and settlement/close convention. Compare the same contract across observations and flag rollover effects where relevant. For FX, commodities, and indices, use consistent daily cutoffs and disclose when dates differ from equities. Never mix a live quote with a prior session close as a daily completed-session return.
@@ -92,7 +94,7 @@ Use the `compose` output with bundled `scripts/render_snapshot.py` and the instr
 2. **US equities:** SPY and QQQ closing prices in USD and signed dollar/percent changes.
 3. **Treasury yields:** 2Y, 10Y, and 30Y yields in percent and signed changes in bp; label differing observation dates.
 4. **Breadth and sectors:** compact named breadth measure or participation proxy, strongest/weakest sector proxies and changes, with incomplete-coverage caveats where needed.
-5. **Risk indicators:** VIX, dollar, oil, and gold levels and daily changes, with accurate instrument names and units. Mark missing entries unavailable.
+5. **Risk & sentiment:** CNN Fear & Greed score/label, dated point change and lavender gauge; VIX/dollar/oil/gold levels, signed daily changes and computed context badges. Follow risk-sentiment.md; mark missing scores or history unavailable.
 6. **What happened:** the two most important verified event/news headlines in tinted cards with visible sentiment labels. Use mint for supportive, rose for adverse, and lavender for neutral or mixed market implications. Include actual versus consensus when verified and relevant. Treat an in-line release as neutral unless independent evidence supports another interpretation; do not force positive/negative labels or map a rising number automatically to positive sentiment.
 7. **What to watch next:** a three-column table: **HKT date/time | Event | What to watch**. Include up to 2–3 verified events with Hong Kong dates and times; keep each event on its own row, including simultaneous events. Make the final column a short observation focus, not a forecast or invented consensus. For uncertain times, retain the verified before-market/after-close label.
 8. **Footer:** actual data sources, observation-date exceptions, and retrieval date/time in HKT. Map compact source keys to real clickable links/citations below the image; never invent citations or attribute connector-only numbers to unrelated web sources.

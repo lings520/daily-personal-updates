@@ -23,6 +23,13 @@ SENTIMENT = {
 def resolve_font(explicit, kind):
     if explicit:
         return explicit
+    preferred = {'regular': '/usr/share/fonts/opentype/urw-base35/NimbusSans-Regular.otf',
+                 'bold': '/usr/share/fonts/opentype/urw-base35/URWBookman-Demi.otf'}
+    if kind in preferred and Path(preferred[kind]).exists():
+        return preferred[kind]
+    if kind in preferred:
+        import warnings
+        warnings.warn('Approved editorial font unavailable; using documented fallback. Install fonts-urw-base35.')
     names = {
         'regular': ['dejavu/DejaVuSans.ttf', 'liberation2/LiberationSans-Regular.ttf'],
         'bold': ['dejavu/DejaVuSans-Bold.ttf', 'liberation2/LiberationSans-Bold.ttf'],
@@ -179,6 +186,60 @@ class Renderer:
             self.draw.line((M+24,y-9,W-M-24,y-9),fill='#E3DFEC',width=1)
         self.y+=height+22
 
+    def risk_section(self,data):
+        fg=data.get('fear_greed', {'status':'unavailable','title':'CNN FEAR & GREED','note':'Target-date score unavailable'})
+        rows=[r['cells'] for r in data['risk']]
+        self.section('RISK & SENTIMENT')
+        y=self.y
+        self.card(y,266,'#F8F5FF')
+        self.text(fg['title'],74,y+18,700,24,True,PURPLE)
+        self.text('0 = fear · 100 = greed',876,y+18,250,17,color=MUTED)
+        self.text(format(fg['score'],'.1f')+' / 100' if fg['status']=='ok' else 'Unavailable',74,y+55,275,36,True)
+        self.pill(fg.get('rating','NO DATA'),348,y+63,'#E5DDF3','#665080',300)
+        self.text(fg.get('change','Score verification incomplete'),670,y+65,456,23,color=MUTED)
+        x0,x1=74,1126
+        boundaries=[0,25,45,55,75,100]
+        colors=['#EDE6F7','#D5C6EC','#B7A0D8','#9476BE','#6C4A96']
+        yy=y+128
+        for i,c in enumerate(colors):
+            a=x0+(x1-x0)*boundaries[i]/100;z=x0+(x1-x0)*boundaries[i+1]/100
+            self.draw.rectangle((a,yy,z-3,yy+22),fill=c)
+        if fg['status']=='ok':
+            xx=x0+(x1-x0)*fg['score']/100
+            self.draw.polygon([(xx,yy-4),(xx-8,yy-17),(xx+8,yy-17)],fill=INK)
+        for i,v in enumerate(boundaries):
+            xx=x0+(x1-x0)*v/100
+            if i==5:xx-=30
+            self.text(str(v),xx,yy+27,60,18,mono=True,color=MUTED)
+        for label,x,w in [('Extreme fear',74,260),('Fear',357,150),('Neutral',545,150),('Greed',750,160),('Extreme greed',932,195)]:
+            self.text(label,x,yy+55,w,20,color=MUTED)
+        self.text(fg['note'],74,y+222,1052,18,mono=True,color=MUTED)
+        self.y+=282
+        y=self.y
+        xs=[72,302,581,819]
+        ws=[230,279,238,309]
+        row_heights=[max(36,*(self.height(t,ws[j]-14,26,j==0) for j,t in enumerate(row)))+24 for row in rows]
+        table_height=77+sum(row_heights)+42
+        self.card(y,table_height,'#F8F5FF')
+        self.draw.rounded_rectangle((49,y+1,1151,y+57),21,fill='#DFD8F0')
+        self.draw.rectangle((49,y+36,1151,y+57),fill='#DFD8F0')
+        for x,w,h in zip(xs,ws,['Benchmark','Level','Daily change','Context']):
+            self.text(h,x,y+14,w-10,23,True,PURPLE)
+        palette={'lavender':('#E4DCF5',PURPLE),'mint':('#D6EFE4',GREEN),'peach':('#F8E1CC','#935B2C'),'rose':('#F5D6E0',RED),'muted':('#E9E7EE',MUTED)}
+        yy=y+77
+        for i,row in enumerate(rows):
+            context=data['risk'][i].get('context', {'label':'UNAVAILABLE','tone':'muted'})
+            label=context['label'];fill,ink=palette[context['tone']]
+            for j,t in enumerate(row):
+                self.text(t,xs[j],yy,ws[j]-14,26,j==0)
+            self.pill(label,xs[3],yy-1,fill,ink,300)
+            yy+=row_heights[i]
+            if i<3:self.draw.line((72,yy-12,1128,yy-12),fill='#E3DFEC',width=1)
+        self.text('P = percentile of absolute move vs 252 prior returns; unavailable if insufficient.',72,yy,1056,18,mono=True,color=MUTED)
+        self.y+=table_height+16
+        self.text('VIX: <15 subdued; 15–<20 moderate; 20–<30 elevated; ≥30 high.\nP: <90 typical; 90–<97 large; ≥97 extreme. Display conventions, not trade signals.',52,self.y,1096,19,mono=True,color=MUTED)
+        self.y+=70
+
     def render(self,data,output,preview=None):
         self.y+=self.text('THE MORNING MARKET',M,self.y,CW,26,True,PURPLE)+12
         self.y+=self.text(data['report_date'],M,self.y,CW,24,False,MUTED)+20
@@ -192,7 +253,7 @@ class Renderer:
         self.metric_cards('US EQUITIES',data['equities'],(25,44,29),'#FFF8FA',True)
         self.metric_cards('TREASURY YIELDS',data['yields'],(24,39,25),'#F3F0FC')
         self.breadth(data)
-        self.table('RISK INDICATORS',['Benchmark','Level','Daily change'],[r['cells'] for r in data['risk']],[436,334,286])
+        self.risk_section(data)
         self.section('WHAT HAPPENED')
         for item in data['news']:
             label,fill,chip,ink=SENTIMENT[item['sentiment']]
@@ -275,6 +336,19 @@ def validate(data):
         if not isinstance(data.get(key),list) or not 1<=len(data[key])<=maximum:
             raise ValueError(f'{key} requires 1–{maximum} objects')
         if not all(isinstance(item,dict) for item in data[key]):raise ValueError(key+' requires structured objects')
+    fg=data.get('fear_greed')
+    if fg:
+        if fg.get('status') not in ('ok','unavailable'):raise ValueError('Invalid sentiment status')
+        for key in ('title','note'):string(fg.get(key),'fear_greed.'+key)
+        if fg['status']=='ok':
+            import math
+            if isinstance(fg.get('score'),bool) or not isinstance(fg.get('score'),(int,float)) or not math.isfinite(fg['score']) or not 0<=fg['score']<=100:raise ValueError('Invalid sentiment score')
+            for key in ('rating','change'):string(fg.get(key),'fear_greed.'+key)
+    for row in data['risk']:
+        c=row.get('context')
+        if c:
+            string(c.get('label'),'risk context')
+            if c.get('tone') not in ('mint','lavender','peach','rose','muted'):raise ValueError('Invalid risk context colour')
     for item in data['news']:
         string(item.get('text'),'news.text')
         if item.get('sentiment') not in SENTIMENT:raise ValueError('Use positive, negative, neutral, or mixed for sentiment')

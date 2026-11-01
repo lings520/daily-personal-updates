@@ -1,3 +1,13 @@
+# Editorial typography and risk-context update
+
+Verified on 2026-11-01: **49 pipeline/context tests and 3 schedule tests passed**; installed skill frontmatter validation passed. Tests cover the full CLI-to-PNG workflow, VIX boundaries, 252-prior-return percentile calculation, tie handling, insufficient history, source/contract/cutoff mismatches, future or duplicate dates, sentinel missing values, sentiment timestamps and illustrative-data safeguards. The approved renderer now uses Bookman headings, Nimbus Sans body and a lavender sentiment gauge.
+
+An independent offline trial exercised sourced fictional sentiment, historical percentiles, incomplete history and rejected mismatches. It found a wrapped-label row-spacing issue; the renderer now measures row heights. A fresh Massive daily-summary request for SPY on 2026-10-30 succeeded as a connector smoke check.
+
+This revision uses fictional fixtures to test new sentiment/history features; it does not claim a fresh live CNN score or a verified real-world historical percentile. Source truth, provider access and history completeness still require per-run verification. Cloud execution and notification delivery are not established by these local tests.
+
+---
+
 # Market pipeline validation
 
 Verified on 2026-11-01 with Python 3.12, Pillow 12.3.0, and python-dateutil 2.9.0.post0.

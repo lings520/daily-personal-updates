@@ -258,6 +258,7 @@ def citations(ids, sources):
 
 
 def risk_rows(metrics, editorial, sources):
+    from risk_context import risk_badge
     result, notes = [], []
     cfg, report = metrics['plan']['config'], metrics['plan']['report_date']
     supplied = editorial.get('risk', {})
@@ -288,7 +289,7 @@ def risk_rows(metrics, editorial, sources):
         label = spec['name']+' · '+instrument+' ETF proxy' if proxy else instrument
         refs = citations(item['source_ids'], sources)
         delta = fmt(current-prior, signed=True)+' pts' if slot == 'vix' else fmt((current/prior-1)*100, signed=True)+'%'
-        result.append({'cells': [label+' '+refs, fmt(current)+' '+unit, delta]})
+        result.append({'cells': [label+' '+refs, fmt(current)+' '+unit, delta], 'context': risk_badge(slot, item)})
         notes.append(spec['name']+': '+day.isoformat()+' vs '+prior_day.isoformat()+'; '+item['cutoff'])
     return result, notes
 
@@ -372,6 +373,8 @@ def compose(metrics, editorial):
             if len(tied) > 1:
                 sectors[label] += ' (tied)'
     risk, risk_notes = risk_rows(metrics, editorial, sources)
+    from risk_context import fear_greed
+    sentiment = fear_greed(editorial.get('fear_greed'), plan, lambda ids: citations(ids, sources))
     news = []
     require(isinstance(editorial.get('news', []), list) and len(editorial.get('news', [])) <= 2, 'Use at most two past news items')
     for item in editorial.get('news', []):
@@ -396,10 +399,10 @@ def compose(metrics, editorial):
     footer.append('As of '+instant(plan['as_of']).astimezone(HK).strftime('%Y-%m-%d %H:%M HKT'))
     if plan['example']:
         footer.append('FICTIONAL TEST · Sample values and events; not a market report.')
-    snapshot = {'schema_version': 2, 'example': plan['example'], 'report_date': plan['report_date']+' · US/EASTERN'+(' · FICTIONAL TEST' if plan['example'] else ''),
+    snapshot = {'schema_version': 3, 'example': plan['example'], 'report_date': plan['report_date']+' · US/EASTERN'+(' · FICTIONAL TEST' if plan['example'] else ''),
                 'headline': editorial['headline'], 'interpretation': editorial['interpretation'], 'session_note': note,
                 'equities': equities, 'yields': yields, 'breadth': breadth, 'sectors': sectors, 'risk': risk,
-                'news': news, 'upcoming': event_rows(plan, editorial, sources), 'footer': footer, 'sources': sources,
+                'fear_greed': sentiment, 'news': news, 'upcoming': event_rows(plan, editorial, sources), 'footer': footer, 'sources': sources,
                 'data_warnings': metrics['warnings']}
     # Import lazily: planning and numeric processing need only the standard library.
     from render_snapshot import validate

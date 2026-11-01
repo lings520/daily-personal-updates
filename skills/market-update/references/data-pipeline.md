@@ -39,7 +39,7 @@ Execute the fixed requests through Massive:
 5. Submit the generated SQL verbatim to `query_data(sql=..., workspace=...)`. Save its complete CSV text as `equities.csv`; save the Treasury response's complete CSV as `treasuries.csv`. JSON arrays and completed REST `results` envelopes are also accepted. Save returned text directly through structured tool/file arguments; do not manually transcribe values or shell-interpolate raw responses.
 6. Preserve pagination and API status. Follow any next-page hint; do not pass an error, truncated result or a first-page subset as a complete response. Stored tables expire after one hour: they are not a persistent daily cache. Regenerate/refetch if the workspace expires.
 
-Two grouped data fetches plus one filtered SQL query cover the equity portion; Treasury yields require one additional bounded query. VIX, actual dollar/oil/gold benchmarks, macro releases and calendar evidence still require separate retrieval. Optional UUP/USO/GLD rows are available if an explicitly documented benchmark fallback is necessary; collecting them does not authorize silently substituting them.
+Two grouped data fetches plus one filtered SQL query cover the equity portion; Treasury yields require one additional bounded query. CNN Fear & Greed, VIX, actual dollar/oil/gold benchmarks and comparable historical levels, macro releases and calendar evidence still require separate retrieval. Optional UUP/USO/GLD rows are available if an explicitly documented benchmark fallback is necessary; collecting them does not authorize silently substituting them.
 
 On a transient timeout/rate limit, retry only the failed request up to twice, respecting provider retry guidance. Do not retry permission failures blindly. If grouped data are unavailable, discover the configured daily open-close path and request each required ticker for both planned dates. Convert those responses to the same rows: `ticker,current_close,prior_close,current_timestamp,prior_timestamp,current_count,prior_count,change_pct`. Verify `from`, `symbol` and adjustment convention; derive a midnight ET millisecond timestamp only from the response's verified session date. Set counts to 0 and values to null for absent bars. Omit `change_pct` if not provided; Python calculates it. Keep one source and adjustment convention within each comparison.
 
@@ -78,6 +78,8 @@ Composition recomputes normalized metrics from saved observations and rejects ed
 The script validates structure and arithmetic, not the truth of a headline or whether a claimed source supports it. Verify news, consensus, sentiment and causation separately. Keep the headline and interpretation under 40 words combined. The pipeline does not guess unverified news or future events.
 
 ## Editorial schema
+
+Read [risk-sentiment.md](risk-sentiment.md) for optional `fear_greed` and each risk item’s `history`. Composition computes context badges from raw observations; it never accepts hand-written percentiles.
 
 Use the fixture's shape as an example only. Required: `headline`, `interpretation`. Optional fields default to explicit unavailable/unverified output, not invented facts:
 
